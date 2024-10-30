@@ -1,5 +1,5 @@
 import sys
-sys.path.append(f'./.venv/lib/python{sys.version_info.major}.{sys.version_info.minor}/site-packages')
+sys.path.append(f'../../.venv/lib/python{sys.version_info.major}.{sys.version_info.minor}/site-packages')
 import time
 import numpy as np
 from multiprocessing.managers import BaseManager

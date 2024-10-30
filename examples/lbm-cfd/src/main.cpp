@@ -221,7 +221,7 @@ void runAscentInSituTasks(conduit::Node &data, ascent::Ascent *ascent_ptr)
     conduit::Node &extracts = add_extracts["extracts"];
 
     char *py_script;
-    if (readFile("python/ascent_trame_bridge.py", &py_script) >= 0)
+    if (readFile("ascent/ascent_trame_bridge.py", &py_script) >= 0)
     {
         extracts["e1/type"] = "python";
         extracts["e1/params/source"] = py_script;
