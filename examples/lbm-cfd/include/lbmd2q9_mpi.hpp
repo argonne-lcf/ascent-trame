@@ -74,6 +74,8 @@ class LbmD2Q9
         uint32_t num_y;
         int offset_x;
         int offset_y;
+        uint32_t *rank_local_size;
+        uint32_t *rank_local_start;
         double speed_scale;
         double *f_0;
         double *f_N;
@@ -124,6 +126,8 @@ class LbmD2Q9
         uint32_t getTotalDimY();
         uint32_t getOffsetX();
         uint32_t getOffsetY();
+        uint32_t* getRankLocalSize(int rank);
+        uint32_t* getRankLocalStart(int rank);
         bool* getBarrier();
         double* getDensity();
         double* getVelocityX();
@@ -199,6 +203,8 @@ LbmD2Q9::LbmD2Q9(uint32_t width, uint32_t height, double scale, int task_id, int
     int i, other_col, other_row;
     array[0] = height;
     array[1] = width;
+    rank_local_size = new uint32_t[2 * num_ranks];
+    rank_local_start = new uint32_t[2 * num_ranks];
     for (i=0; i<num_ranks; i++)
     {
         other_col = i % n_x;
@@ -207,6 +213,10 @@ LbmD2Q9::LbmD2Q9(uint32_t width, uint32_t height, double scale, int task_id, int
         subsize[1] = chunk_w + ((other_col < extra_w) ? 1 : 0);
         offsets[0] = other_row * chunk_h + std::min(other_row, extra_h);
         offsets[1] = other_col * chunk_w + std::min(other_col, extra_w);
+        rank_local_size[2 * i + 0] = subsize[1];
+        rank_local_size[2 * i + 1] = subsize[0];
+        rank_local_start[2 * i + 0] = (other_col == 0) ? 0 : 1;
+        rank_local_start[2 * i + 1] = (other_row == 0) ? 0 : 1;
         MPI_Type_create_subarray(2, array, subsize, offsets, MPI_ORDER_C, MPI_DOUBLE, &other_scalar[i]);
         MPI_Type_commit(&other_scalar[i]);
         MPI_Type_create_subarray(2, array, subsize, offsets, MPI_ORDER_C, MPI_BYTE, &other_bool[i]);
@@ -264,6 +274,8 @@ LbmD2Q9::~LbmD2Q9()
         MPI_Type_free(&other_bool[i]);
     }
 
+    delete[] rank_local_size;
+    delete[] rank_local_start;
     delete[] f_0;
     delete[] barrier;
 }
@@ -597,6 +609,18 @@ uint32_t LbmD2Q9::getOffsetX()
 uint32_t LbmD2Q9::getOffsetY()
 {
     return offset_y;
+}
+
+// get the local width and height of a particular rank's data
+uint32_t* LbmD2Q9::getRankLocalSize(int rank)
+{
+    return rank_local_size + (2 * rank);
+}
+
+// get the local x and y start of a particular rank's data
+uint32_t* LbmD2Q9::getRankLocalStart(int rank)
+{
+    return rank_local_start + (2 * rank);
 }
 
 // get barrier array
