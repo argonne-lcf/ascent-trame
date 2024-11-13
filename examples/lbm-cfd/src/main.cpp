@@ -14,7 +14,7 @@ void runLbmCfdSimulation(int rank, int num_ranks, uint32_t dim_x, uint32_t dim_y
 void createDivergingColorMap(uint8_t *cmap, uint32_t size);
 #ifdef ASCENT_ENABLED
 void updateAscentData(int rank, int num_ranks, int step, double time, conduit::Node &mesh);
-void runAscentInSituTasks(conduit::Node &mesh, ascent::Ascent *ascent_ptr);
+void runAscentInSituTasks(conduit::Node &mesh, conduit::Node &selections, ascent::Ascent *ascent_ptr);
 void steeringCallback(conduit::Node &params, conduit::Node &output);
 #endif
 int32_t readFile(const char *filename, char** data_ptr);
@@ -124,6 +124,20 @@ void runLbmCfdSimulation(int rank, int num_ranks, uint32_t dim_x, uint32_t dim_y
     int output_count = 0;
     double next_output_time = 0.0;
     uint8_t stable, all_stable;
+#ifdef ASCENT_ENABLED
+    int i;
+    conduit::Node selections;
+    for (i = 0; i < num_ranks; i++)
+    {
+        uint32_t *rank_start = lbm->getRankLocalStart(i);
+        uint32_t *rank_size = lbm->getRankLocalSize(i);
+        conduit::Node &selection = selections.append();
+        selection["type"] = "logical";
+        selection["domain_id"] = i;
+        selection["start"] = {rank_start[0], rank_start[1], 0u};
+        selection["end"] = {rank_start[0] + rank_size[0] - 1u, rank_start[1] + rank_size[1] - 1u, 0u};
+    }
+#endif
     for (t = 0; t < time_steps; t++)
     {
         // output data at frequency equivalent to `physical_freq` time
@@ -146,7 +160,7 @@ void runLbmCfdSimulation(int rank, int num_ranks, uint32_t dim_x, uint32_t dim_y
             ascent::Ascent *ascent_ptr = static_cast<ascent::Ascent*>(ptr);
             conduit::Node mesh;
             updateAscentData(rank, num_ranks, t, time, mesh);
-            runAscentInSituTasks(mesh, ascent_ptr);
+            runAscentInSituTasks(mesh, selections, ascent_ptr);
 #endif
             output_count++;
             next_output_time = output_count * physical_freq;
@@ -208,6 +222,7 @@ void updateAscentData(int rank, int num_ranks, int step, double time, conduit::N
     mesh["fields/vorticity/topology"] = "topo";
     mesh["fields/vorticity/values"].set_external(lbm->getVorticity(), prop_size);
 
+
     conduit::Node options, selections, output;
     for (i = 0; i < num_ranks; i++)
     {
@@ -241,11 +256,25 @@ void updateAscentData(int rank, int num_ranks, int step, double time, conduit::N
     delete[] barrier_data;
 }
 
-void runAscentInSituTasks(conduit::Node &mesh, ascent::Ascent *ascent_ptr)
+void runAscentInSituTasks(conduit::Node &mesh, conduit::Node &selections, ascent::Ascent *ascent_ptr)
 {
     ascent_ptr->publish(mesh);
 
     conduit::Node actions;
+
+    /*
+    //
+    conduit::Node &add_pipelines = actions.append();
+    add_pipelines["action"] = "add_pipelines";
+    conduit::Node &pipelines = add_pipelines["pipelines"];
+    pipelines["pl1/f1/type"] = "partition";
+    pipelines["pl1/f1/params/target"] = 1;
+    pipelines["pl1/f1/params/fields"] = {"vorticity"};
+    pipelines["pl1/f1/params/selections"] = selections;
+    pipelines["pl1/f1/params/mapping"] = 0;
+    //
+    */
+
     conduit::Node &add_extracts = actions.append();
     add_extracts["action"] = "add_extracts";
     conduit::Node &extracts = add_extracts["extracts"];
@@ -256,6 +285,7 @@ void runAscentInSituTasks(conduit::Node &mesh, ascent::Ascent *ascent_ptr)
         extracts["e1/type"] = "python";
         extracts["e1/params/source"] = py_script;
     }
+    //std::cout << actions.to_yaml() << std::endl;
 
     ascent_ptr->execute(actions);
 }
