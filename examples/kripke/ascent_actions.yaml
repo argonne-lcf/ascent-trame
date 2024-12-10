@@ -1,15 +1,11 @@
-
 -
-  action: "add_scenes"
-  scenes:
-    s1:
-      plots:
-        p1:
-          type: "volume"
-          field: "phi"
-      renders:
-        r1:
-          type: "cinema"
-          phi: 2
-          theta: 2
-          db_name: "ascent-trame"
+  action: "add_triggers"
+  triggers:
+    t1:
+      params:
+        condition: "cycle() % 1 == 0"
+        actions_file : "cinema.yaml"
+    t2:
+      params:
+        condition: "cycle() % 1 == 0"
+        actions_file : "trame.yaml"

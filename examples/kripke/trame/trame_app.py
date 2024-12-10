@@ -1,12 +1,13 @@
-import pandas as pd
+import asyncio
 import os
+import time
 import zipfile
-import numpy as np
 import cv2
+import pandas as pd
 from multiprocessing import Process, Queue
 from multiprocessing.managers import BaseManager
 from trame.app import get_server, asynchronous
-from trame.widgets import vuetify, rca
+from trame.widgets import vuetify, rca, client
 from trame.ui.vuetify import SinglePageLayout
 
 
@@ -18,39 +19,35 @@ def main():
     state_queue = Queue()
     update_queue = Queue()
 
-    # start Trame app in new thread
     trame_thread = Process(target=runTrameServer, args=(state_queue, update_queue))
     trame_thread.daemon = True
     trame_thread.start()
 
-    # create queues from Ascent data
     queue_data = Queue()
     queue_signal = Queue()
 
-    # start Queue Manager in new thread
     queue_mgr_thread = Process(target=runQueueManager, args=(queue_data, queue_signal))
     queue_mgr_thread.daemon = True
     queue_mgr_thread.start()
 
-    # wait for data coming from Ascent
     data = None
     while data != "":
         print("waiting on data... ", end="")
         sim_data = queue_data.get()
-        print(f"received!")
-
+        print("received!")
         state_queue.put(sim_data)
         updates = update_queue.get()
-
         queue_signal.put(updates)
 
 
 def runTrameServer(state_queue, update_queue):
     view = AscentView()
+
     server = get_server(client_type="vue2")
     state = server.state
     ctrl = server.controller
-    cinema_data = None
+
+    # register RCA view with Trame controller
     view_handler = None
 
     @ctrl.add("on_server_ready")
@@ -58,53 +55,150 @@ def runTrameServer(state_queue, update_queue):
         nonlocal view_handler
         view_handler = RcaViewAdapter(view, "view")
         ctrl.rc_area_register(view_handler)
+
         asynchronous.create_task(
             checkForStateUpdates(state, state_queue, update_queue, view, view_handler)
         )
 
-    @state.change("timestep", "phi", "theta")
-    def uiStateUpdateImage(**kwargs):
-        if cinema_data is not None and view_handler is not None:
-            selected_row = cinema_data[
-                (cinema_data["time"] == state.timestep)
-                & (cinema_data["phi"] == state.phi)
-                & (cinema_data["theta"] == state.theta)
-            ]
-            if not selected_row.empty:
-                image_file = selected_row.iloc[0]["FILE"]
-                image_path = os.path.join("received", "ascent-trame", image_file)
-                view.setImagePath(image_path)
+    # callback for steering enabled change
+    def uiStateEnableSteeringUpdate(enable_steering, **kwargs):
+        if state.connected:
+            state.allow_submit = enable_steering
+        if not enable_steering:
+            update_queue.put({})
+
+    # callback for clicking submit button
+    def submitSteeringOptions():
+        updates = {}
+
+        if state.phi_input:
+            try:
+                updates["phi"] = int(state.phi_input)
+            except ValueError:
+                pass
+
+        if state.theta_input:
+            try:
+                updates["theta"] = int(state.theta_input)
+            except ValueError:
+                pass
+
+        if state.zoom_input:
+            try:
+                updates["zoom"] = float(state.zoom_input)
+            except ValueError:
+                pass
+
+        updates["annotations"] = "true" if state.annotations_input else "false"
+        update_queue.put(updates)
+
+    def loadFrame(**kwargs):
+        print("Loading frame")
+        if (
+            state.selected_time is None
+            or state.selected_phi is None
+            or state.selected_theta is None
+        ):
+            return
+        time = state.selected_time
+        phi = state.selected_phi
+        theta = state.selected_theta
+        image_path = f"received/ascent-trame/{time}/{phi}_{theta}_ascent-trame.png"
+        print(f"Checking for image: {image_path}")
+        if os.path.exists(image_path):
+            print(f"Loading frame: time={time}, phi={phi}, theta={theta}")
+            view.updateData(image_path)
+            if view_handler is not None:
                 view_handler.pushFrame()
-            else:
-                print("No matching image found for the selected values.")
+        else:
+            print(f"Image not found: {image_path}")
 
-    state.vis_style = "width: 800px; height: 600px; border: solid 2px #000000; box-sizing: content-box;"
+    # register callbacks
+    state.change("enable_steering")(uiStateEnableSteeringUpdate)
+    state.change("selected_time")(loadFrame)
+    state.change("selected_phi")(loadFrame)
+    state.change("selected_theta")(loadFrame)
+
+    state.timestep_values = []
+    state.phi_values = []
+    state.theta_values = []
+
+    # define webpage layout
+    state.allow_submit = False
+    state.vis_style = "width: 1024px; height: 1024px; border: solid 2px #000000; box-sizing: content-box;"
     with SinglePageLayout(server) as layout:
-        layout.title.set_text("Cinema Database Viewer")
-
+        client.Style("#rca-view div div img { width: 100%; height: auto; }")
+        layout.title.set_text("Ascent-Trame")
         with layout.toolbar:
+            vuetify.VDivider(vertical=True, classes="mx-2")
+            vuetify.VSwitch(
+                label="Enable Steering",
+                v_model=("enable_steering", True),
+                hide_details=True,
+                dense=True,
+            )
+            vuetify.VSpacer()
+            vuetify.VTextField(
+                label="Adjust Phi",
+                v_model=("phi_input", ""),
+                hide_details=True,
+                dense=True,
+                type="number",
+            )
+            vuetify.VSpacer()
+            vuetify.VTextField(
+                label="Adjust Theta",
+                v_model=("theta_input", ""),
+                hide_details=True,
+                dense=True,
+                type="number",
+            )
+            vuetify.VSpacer()
+            vuetify.VTextField(
+                label="Adjust Zoom",
+                v_model=("zoom_input", ""),
+                hide_details=True,
+                dense=True,
+                type="number",
+            )
+            vuetify.VSpacer()
+            vuetify.VSwitch(
+                label="Annotations",
+                v_model=("annotations_input", True),
+                hide_details=True,
+                dense=True,
+            )
+            vuetify.VSpacer()
             vuetify.VSelect(
-                v_model=("timestep", 0),
-                items=("timestep_values", []),
                 label="Timestep",
-                dense=True,
+                v_model=("selected_time", ""),
+                items=("timestep_values",),
                 hide_details=True,
+                dense=True,
             )
+            vuetify.VSpacer()
             vuetify.VSelect(
-                v_model=("phi", 0),
-                items=("phi_values", []),
                 label="Phi",
-                dense=True,
+                v_model=("selected_phi", ""),
+                items=("phi_values",),
                 hide_details=True,
+                dense=True,
             )
+            vuetify.VSpacer()
             vuetify.VSelect(
-                v_model=("theta", 0),
-                items=("theta_values", []),
                 label="Theta",
-                dense=True,
+                v_model=("selected_theta", ""),
+                items=("theta_values",),
                 hide_details=True,
+                dense=True,
             )
-
+            vuetify.VSpacer()
+            vuetify.VBtn(
+                "Submit",
+                color="primary",
+                disabled=("!allow_submit",),
+                click=submitSteeringOptions,
+            )
         with layout.content:
             with vuetify.VContainer(
                 fluid=True,
@@ -115,57 +209,72 @@ def runTrameServer(state_queue, update_queue):
                     name="view", display="image", id="rca-view", style=("vis_style",)
                 )
 
-    async def checkForStateUpdates(
-        state, state_queue, update_queue, view, view_handler
-    ):
-        nonlocal cinema_data
-        while True:
-            try:
-                data = state_queue.get(block=False)
-
-                if "zip_content" in data:
-                    print("Received zip_content in state_data, unzipping...")
-                    zip_path = "received/cinema_data.zip"
-                    os.makedirs("received", exist_ok=True)
-
-                    # Write zip content to a file
-                    with open(zip_path, "wb") as f:
-                        f.write(data["zip_content"])
-
-                    # Extract zip file contents
-                    with zipfile.ZipFile(zip_path, "r") as zip_ref:
-                        zip_ref.extractall("received/ascent-trame")
-                    print("Extraction complete.")
-
-                    csv_path = "received/ascent-trame/data.csv"
-                    cinema_data = pd.read_csv(csv_path)
-
-                    if cinema_data is not None:
-                        # Populate dropdown values based on data.csv
-                        state.timestep_values = [
-                            {"text": str(v), "value": v}
-                            for v in sorted(cinema_data["time"].unique())
-                        ]
-                        state.phi_values = [
-                            {"text": str(v), "value": v}
-                            for v in sorted(cinema_data["phi"].unique())
-                        ]
-                        state.theta_values = [
-                            {"text": str(v), "value": v}
-                            for v in sorted(cinema_data["theta"].unique())
-                        ]
-
-                        # Set initial dropdown selections
-                        state.timestep = state.timestep_values[0]["value"]
-                        state.phi = state.phi_values[0]["value"]
-                        state.theta = state.theta_values[0]["value"]
-
-                        state.flush()
-                        uiStateUpdateImage()
-            except:
-                pass
-
+    # start Trame server
     server.start()
+
+
+async def checkForStateUpdates(state, state_queue, update_queue, view, view_handler):
+    while True:
+        try:
+            state_data = state_queue.get(block=False)
+
+            state.connected = True
+            print("Connected to Ascent")
+            if state.enable_steering:
+                print("Steering enabled")
+                state.allow_submit = True
+
+            if "zip_content" in state_data:
+                receive_dir = "received"
+                zip_path = os.path.join(receive_dir, "cinema_data.zip")
+                print(f"Received zip file: {zip_path}")
+                os.makedirs(receive_dir, exist_ok=True)
+                with open(zip_path, "wb") as f:
+                    f.write(state_data["zip_content"])
+                with zipfile.ZipFile(zip_path, "r") as zip_ref:
+                    zip_ref.extractall(receive_dir)
+
+                csv_path = os.path.join(receive_dir, "ascent-trame/data.csv")
+                print(f"Loading CSV file: {csv_path}")
+                if os.path.exists(csv_path):
+                    cinema_data = pd.read_csv(csv_path)
+                    print("Populating dropdowns")
+                    state.update(
+                        {
+                            "timestep_values": [
+                                {"text": str(v), "value": str(v)}
+                                for v in sorted(cinema_data["time"].unique())
+                            ],
+                            "phi_values": [
+                                {"text": str(v), "value": str(v)}
+                                for v in sorted(cinema_data["phi"].unique())
+                            ],
+                            "theta_values": [
+                                {"text": str(v), "value": str(v)}
+                                for v in sorted(cinema_data["theta"].unique())
+                            ],
+                        }
+                    )
+
+                    if state.selected_time == "":
+                        state.selected_time = state.timestep_values[0]["value"]
+
+                    if state.selected_phi == "":
+                        state.selected_phi = state.phi_values[0]["value"]
+
+                    if state.selected_theta == "":
+                        state.selected_theta = state.theta_values[0]["value"]
+
+            state.flush()
+
+            if not state.enable_steering:
+                print("Steering disabled")
+                update_queue.put({})
+
+            print("State updated")
+        except:
+            pass
+        await asyncio.sleep(0)
 
 
 def runQueueManager(queue_data, queue_signal):
@@ -174,7 +283,7 @@ def runQueueManager(queue_data, queue_signal):
     QueueManager.register("get_signal_queue", callable=lambda: queue_signal)
 
     # create Queue Manager
-    mgr = QueueManager(address=("127.0.0.1", 8001), authkey=b"ascent-trame")
+    mgr = QueueManager(address=("127.0.0.1", 8000), authkey=b"ascent-trame")
 
     # start Queue Manager server
     server = mgr.get_server()
@@ -185,14 +294,18 @@ class RcaViewAdapter:
     def __init__(self, view, name):
         self._view = view
         self._streamer = None
-        self.area_name = name
         self._metadata = {
             "type": "image/jpeg",
             "codec": "",
             "w": 0,
             "h": 0,
+            "st": 0,
             "key": "key",
         }
+        self.area_name = name
+
+    def set_streamer(self, stream_manager):
+        self._streamer = stream_manager
 
     def pushFrame(self):
         if self._streamer is not None:
@@ -200,18 +313,21 @@ class RcaViewAdapter:
 
     async def _asyncPushFrame(self):
         frame_data = self._view.getFrame()
-        self._streamer.push_content(
-            self.area_name, self._getMetadata(), frame_data.data
-        )
+        if frame_data is not None:
+            self._streamer.push_content(
+                self.area_name, self._getMetadata(), frame_data.data
+            )
 
     def _getMetadata(self):
         width, height = self._view.getSize()
-        self._metadata["w"] = width
-        self._metadata["h"] = height
-        return self._metadata
-
-    def set_streamer(self, stream_manager):
-        self._streamer = stream_manager
+        return {
+            "type": "image/jpeg",
+            "codec": "",
+            "w": width,
+            "h": height,
+            "st": self._view.getFrameTime(),
+            "key": "key",
+        }
 
     def update_size(self, origin, size):
         width = int(size.get("w", 400))
@@ -219,45 +335,36 @@ class RcaViewAdapter:
         print(f"new size: {width}x{height}")
 
     def on_interaction(self, origin, event):
-        print(f"Interaction received: {event}")
+        pass
 
 
 class AscentView:
     def __init__(self):
-        self._path = None
-        self._scale = 1.0
-        self._base_image = None
-        self._image = np.zeros((2, 1), dtype=np.uint8)
+        self._image = None
         self._jpeg_quality = 94
+        self._frame_time = round(time.time_ns() / 1000000)
+
+    def updateData(self, image_path):
+        self._image = cv2.imread(image_path)
+        if self._image is not None:
+            self._frame_time = round(time.time_ns() / 1000000)
 
     def getSize(self):
-        height, width, channels = self._image.shape
-        return (width, height)
-
-    def setImagePath(self, image_path):
-        print(f"Setting image: {image_path}")
-        if os.path.exists(image_path):
-            self._path = image_path
-        else:
-            print(f"Image path not found: {image_path}")
+        if self._image is not None:
+            height, width, _ = self._image.shape
+            return width, height
+        return 0, 0
 
     def getFrame(self):
-        if not os.path.exists(self._path):
-            return None
-
-        image = cv2.imread(self._path)
         result, encoded_img = cv2.imencode(
-            ".jpg", image, (cv2.IMWRITE_JPEG_QUALITY, self._jpeg_quality)
+            ".jpg", self._image, (cv2.IMWRITE_JPEG_QUALITY, self._jpeg_quality)
         )
         if result:
             return encoded_img
         return None
 
-    def updateScale(self, scale):
-        self._scale = scale
-
-    def updateData(self, data):
-        self._data = data
+    def getFrameTime(self):
+        return self._frame_time
 
 
 if __name__ == "__main__":

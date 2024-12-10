@@ -1,15 +1,26 @@
-
--
-  action: "add_scenes"
+- action: add_scenes
   scenes:
     s1:
       plots:
         p1:
-          type: "volume"
-          field: "phi"
+          color_table:
+            discrete: 'false'
+            name: Viridis
+            reverse: 'false'
+          field: phi
+          type: volume
       renders:
         r1:
-          type: "cinema"
-          phi: 2
-          theta: 2
-          db_name: "ascent-trame"
+          annotations: 'false'
+          camera:
+            zoom: 2.0
+          db_name: ascent-trame
+          dphi: 90.0
+          dtheta: 90.0
+          phi_range:
+          - -180.0
+          - 180.0
+          theta_range:
+          - 0.0
+          - 180.0
+          type: cinema
