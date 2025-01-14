@@ -1,0 +1,12 @@
+#!/bin/bash
+set -e
+if [ -f ./lib/libHYPRE.a ]; then
+  exit 0
+fi
+if [ ! -d "hypre" ]; then
+  git clone https://github.com/hypre-space/hypre.git -b v2.11.2
+fi
+
+cd hypre*/src
+./configure --prefix=`pwd`/../.. --without-MPI
+make -j4 install

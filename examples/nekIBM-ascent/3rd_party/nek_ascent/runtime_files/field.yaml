@@ -1,0 +1,7 @@
+-
+  action: "add_commands"
+  commands:
+    c1:
+      params:
+        shell_command: ./field.sh
+        mpi_behavior: "root"

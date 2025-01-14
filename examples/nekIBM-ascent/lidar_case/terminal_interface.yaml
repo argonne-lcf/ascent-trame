@@ -1,0 +1,7 @@
+-
+  action: "add_commands"
+  commands:
+    c1:
+      params:
+        callback: start_terminal_interface
+        mpi_behavior: "all"

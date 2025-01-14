@@ -1,0 +1,19 @@
+-
+  action: "add_triggers"
+  triggers:
+    t1:
+      params:
+        condition: "cycle() % 100 == 0"
+        actions_file : "binning.yaml"
+    t2:
+      params:
+        condition: "cycle() % 100 == 0"
+        actions_file : "field.yaml"
+    t3:
+      params:
+        condition: "cycle() % 100 == 0"
+        actions_file : "visnek.yaml"
+    t4:
+      params:
+        condition: "cycle() % 101 == 0"
+        actions_file : "jupyter_interface.yaml"

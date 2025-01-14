@@ -1,0 +1,95 @@
+#!/bin/bash
+#-------------------------------------------------------------------------------
+# Nek5000 config file
+#-------------------------------------------------------------------------------
+
+SCRIPT_PATH=$(readlink -f "$0")
+SCRIPT_DIR=$(dirname "$SCRIPT_PATH")
+SOURCE_ROOT=$(dirname "$SCRIPT_DIR")
+
+# remove ascent build directory
+# if [ -d "$SOURCE_ROOT/3rd_party/nek_ascent/build" ]; then
+#     echo "Removing directory: $SOURCE_ROOT/3rd_party/nek_ascent/build"
+#     rm -rf "$SOURCE_ROOT/3rd_party/nek_ascent/build"
+# fi
+
+# customize this file to load any necessary modules
+source $SOURCE_ROOT/sourceme
+
+# Fortran/C compiler
+FC="ftn"
+CC="cc"
+CXX="CC"
+
+# pre-processor list (set to "?" to get a list of available symbols)
+PPLIST="LPM"
+
+# Ascent cmake directory
+ASCENT=1
+ASCENT_DIR="/home/siramok/crux/ascent-trame/scripts/build-crux/ascent/scripts/build_ascent/install/ascent-checkout/lib/cmake/ascent"
+
+# optional compiler flags
+FFLAGS="-march=native -std=legacy -mcmodel=large"
+CFLAGS="-march=native"
+
+###############################################################################
+# DONT'T TOUCH WHAT FOLLOWS !!!
+###############################################################################
+set -e
+
+# assign version tag
+mver=17.0.4
+
+# set defaults
+: ${SOURCE_ROOT:="$INSTALL_DIR/nekIBM-ascent"}
+: ${FC:="mpif77"}
+: ${CC:="mpicc"}
+: ${MPI:=1}
+: ${PROFILING:=1}
+: ${VISIT:=0}
+: ${ASCENT:=0}
+: ${PPLIST:=""}
+
+# overwrite source path with optional 2nd argument
+if [ -d $2 ] && [ $# -eq 2 ]; then
+  SOURCE_ROOT="$2"
+  echo "change source code directory to: ", $SOURCE_ROOT
+fi
+
+# create makefile
+source $SOURCE_ROOT/core/makenek.inc
+
+# compile 3rd_party code
+make_3rd_party 2>&1 | tee -a compiler.out
+
+# compile nek
+make -j6 -f makefile 2>&1 | tee -a compiler.out
+
+# create a better default session file
+if [ ! -e "SESSION.NAME" ]; then
+  echo $1 >> SESSION.NAME
+  echo $PWD >> SESSION.NAME
+fi
+
+# copy Ascent runtime files into the cwd
+cp -R $SOURCE_ROOT/3rd_party/nek_ascent/runtime_files/* .
+
+# Create run script
+if [ ! -e "run_crux.sh" ]; then
+cat << EOF > run_crux.sh
+#!/bin/bash
+source $SOURCE_ROOT/sourceme
+if [ -e "ascent_actions.yaml" ]; then
+  rm ascent_actions.yaml
+fi
+cp terminal.yaml ascent_actions.yaml
+NODES=\`wc -l < \$PBS_NODEFILE\`
+RANKS_PER_NODE=32
+TOTAL_RANKS=\$(( \$NODES * \$RANKS_PER_NODE ))
+mpiexec -n \$TOTAL_RANKS -ppn \$RANKS_PER_NODE ./nek5000
+
+EOF
+chmod +x run_crux.sh
+fi
+
+exit 0
