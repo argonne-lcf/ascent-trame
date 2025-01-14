@@ -5,11 +5,10 @@
 
 # Constants
 SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
-ROOT_DIR=$SCRIPT_DIR/../
+ROOT_DIR=$(dirname "$SCRIPT_DIR")
 BUILD_DIR=$SCRIPT_DIR/build-crux
 VENV_DIR=$BUILD_DIR/python-venv
 EXAMPLES_DIR=$ROOT_DIR/examples
-LBMCFD_DIR=$EXAMPLES_DIR/lbm-cfd
 ASCENT_INSTALL_DIR=$BUILD_DIR/ascent/scripts/build_ascent/install
 ASCENT_CONFIG_MK=$ASCENT_INSTALL_DIR/ascent-checkout/share/ascent/ascent_config.mk
 
@@ -72,68 +71,60 @@ function fix_ascent_config() {
     replace_line "$ASCENT_CONFIG_MK" 220 "ASCENT_CAMP_LIB_FLAGS = \$(if \$(ASCENT_CAMP_DIR),-L \$(ASCENT_CAMP_DIR)/lib -lcamp)"
 }
 
-function build_examples() {
+# LBM-CFD Example
+function setup_lbm_cfd() {
+    local lbm_cfd_dir="$EXAMPLES_DIR/lbm-cfd"
     echo "Building LBM-CFD example..."
-    if [ ! -d "$LBMCFD_DIR" ]; then
-        echo "Error: $LBMCFD_DIR does not exist. Ensure the examples are present."
+
+    if [ ! -d "$lbm_cfd_dir" ]; then
+        echo "Error: $lbm_cfd_dir does not exist. Ensure the example is present."
         exit 1
     fi
-    cd "$LBMCFD_DIR"
+
+    cd "$lbm_cfd_dir"
     env ASCENT_DIR="$ASCENT_INSTALL_DIR/ascent-checkout" make
 }
 
-function create_run_script() {
-    echo "Creating run script..."
-    cat << EOF > "$LBMCFD_DIR/run-crux.sh"
-#!/bin/bash -l
+# NekIBM Example
+function setup_nekibm() {
+    local nekibm_dir="$EXAMPLES_DIR/nekIBM-ascent"
+    local tools_dir="$nekibm_dir/tools"
+    local sourceme_file="$nekibm_dir/sourceme"
+    local makenek_file="$nekibm_dir/bin/makenek"
 
-# Load required modules
+    echo "Setting up nekIBM-ascent example..."
+
+    # Create sourceme if it doesn't exist
+    if [ ! -f "$sourceme_file" ]; then
+        echo "Creating $sourceme_file..."
+        cat << EOF > "$sourceme_file"
+# Modules required for nekIBM-ascent
 module use /soft/modulefiles
-module load spack-pe-base
-module load cmake
-module load PrgEnv-gnu
-module load cray-python
-
-# MPI and OpenMP Configuration
-NNODES=\$(wc -l < \$PBS_NODEFILE)
-NRANKS_PER_NODE=32
-NTHREADS=2
-NDEPTH=2
-NTOTRANKS=\$((NNODES * NRANKS_PER_NODE))
-
-echo "NUM_OF_NODES= \${NNODES}"
-echo "TOTAL_NUM_RANKS= \${NTOTRANKS}"
-echo "RANKS_PER_NODE= \${NRANKS_PER_NODE}"
-echo "THREADS_PER_RANK= \${NTHREADS}"
-
-# Activate Python Virtual Environment
-source "$VENV_DIR/bin/activate"
-
-# Set Python and Ascent Paths
-PYTHON_SITE_PKG="\${PYTHON_VENV_DIR}/lib/python3.11/site-packages"
-ASCENT_DIR="$ASCENT_INSTALL_DIR"
-export PYTHONPATH="\$PYTHONPATH:\$PYTHON_SITE_PKG:\$ASCENT_DIR/ascent-checkout/python-modules/:\$ASCENT_DIR/conduit-v0.9.2/python-modules/"
-
-# Start Trame Server in the Background
-nohup python trame/trame_app.py --host 0.0.0.0 --port 8888 --server --timeout 0 > trame.log 2>&1 &
-TRAME_PID=\$!
-trap "kill \$TRAME_PID" EXIT
-
-echo "---------------------------------------------------------------------------------"
-echo "To access the Trame server, copy and run this command in a local terminal:"
-echo "ssh -v -N -L 8888:\$(hostname):8888 \$USER@crux.alcf.anl.gov"
-echo "---------------------------------------------------------------------------------"
-
-# Pause for SSH command copying
-sleep 5
-
-# MPI Arguments
-MPI_ARGS="-n \${NTOTRANKS} --ppn \${NRANKS_PER_NODE} --depth=\${NDEPTH} --cpu-bind depth"
-OMP_ARGS="--env OMP_NUM_THREADS=\${NTHREADS} --env OMP_PROC_BIND=true --env OMP_PLACES=cores"
-mpiexec \${MPI_ARGS} \${OMP_ARGS} ./bin/lbmcfd
+module load spack-pe-base cmake PrgEnv-gnu cray-python
+source $VENV_DIR/bin/activate
 EOF
+    else
+        echo "$sourceme_file already exists. Skipping creation."
+    fi
 
-    chmod +x "$ROOT_DIR/run-crux.sh"
+    # Update makefile.template and makenek
+    sed -i "86s|include /path/to/ascent_config.mk|include ${ASCENT_CONFIG_MK}|" ${nekibm_dir}/core/makefile.template
+    sed -i "29s|ASCENT_DIR=\"/path/to/ascent-checkout/lib/cmake/ascent\"|ASCENT_DIR=\"${ASCENT_INSTALL_DIR}/ascent-checkout/lib/cmake/ascent\"|" ${nekibm_dir}/bin/makenek
+
+    # Build tools
+    cd "$tools_dir"
+    ./maketools all
+
+    # Run makenek in lidar_case directory with "uniform" argument
+    local lidar_case_dir="$nekibm_dir/lidar_case"
+    echo "Running makenek with 'uniform' in $lidar_case_dir..."
+    if [ ! -f "$makenek_file" ]; then
+        echo "Error: makenek script not found at $makenek_file"
+        exit 1
+    fi
+
+    cd "$lidar_case_dir"
+    "$makenek_file" uniform
 }
 
 # Main Workflow
@@ -143,7 +134,9 @@ mkdir -p "$BUILD_DIR"
 setup_venv
 build_ascent
 fix_ascent_config
-build_examples
-create_run_script
-echo "Setup complete!"
 
+# Build examples
+setup_lbm_cfd
+setup_nekibm
+
+echo "Setup complete!"
