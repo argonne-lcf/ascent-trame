@@ -1,0 +1,15 @@
+3rd_party/gslib/v1.0.1.tar.gz
+3rd_party/gslib/gslib-1.0.1/
+3rd_party/gslib/lib/
+3rd_party/nek_ascent/build/
+3rd_party/nek_ascent/include/
+3rd_party/nek_ascent/lib/
+
+bin/amg_hypre
+bin/genmap_bin
+bin/n2to3
+bin/nekmerge
+bin/pretex
+bin/prex
+bin/re2torea
+bin/reatore2
