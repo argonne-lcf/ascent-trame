@@ -1,6 +1,0 @@
-SOURCE_ROOT=/home/siramok/crux/ascent-trame/examples/nekIBM-ascent
-FC=ftn
-FFLAGS=-march=native -std=legacy -mcmodel=large -fdefault-real-8 -fdefault-double-8 -cpp
-CC=cc
-CFLAGS=-march=native
-PPLIST=LPM MPI UNDERSCORE TIMER ASCENT
