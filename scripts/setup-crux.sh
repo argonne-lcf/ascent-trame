@@ -147,15 +147,14 @@ EOF
     sed -i "29s|ASCENT_DIR=\"/path/to/ascent-checkout/lib/cmake/ascent\"|ASCENT_DIR=\"${ASCENT_INSTALL_DIR}/ascent-checkout/lib/cmake/ascent\"|" ${MAKENEK_PATH}
 
     # Build tools
-    cd "$tools_dir"
+    cd "$NEKIBM_TOOLS_DIR"
     ./maketools all
 
     # Run makenek in lidar_case directory with "uniform" argument
-    local lidar_case_dir="$nekibm_dir/lidar_case"
     echo "Running makenek..."
 
-    cd $NEKIBM_DIR/lidar_case
-    "$makenek_file" uniform
+    cd "$NEKIBM_DIR/lidar_case"
+    "$MAKENEK_PATH" uniform
 }
 
 # Main Workflow
