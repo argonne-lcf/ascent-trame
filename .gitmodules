@@ -1,0 +1,3 @@
+[submodule "examples/bloodflow"]
+	path = examples/bloodflow
+	url = https://github.com/mvictoras/bloodflow.git
