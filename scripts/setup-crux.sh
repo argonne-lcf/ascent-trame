@@ -21,7 +21,7 @@ SOURCEME_PATH="$NEKIBM_DIR/sourceme"
 MAKENEK_PATH="$NEKIBM_DIR/bin/makenek"
 BLOODFLOW_DIR="$EXAMPLES_DIR/bloodflow"
 
-function update_sumodules() {
+function update_submodules() {
     echo "Updating submodules..."
     git submodule update --init --recursive
 }
@@ -231,7 +231,7 @@ echo "This script assumes that you are running from a login node, since it requi
 
 echo "Preparing dependencies..."
 mkdir -p "$BUILD_DIR"
-update_sumodules
+update_submodules
 load_modules
 setup_venv
 build_ascent
