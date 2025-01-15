@@ -36,7 +36,7 @@ function setup_venv() {
     echo "Creating a new Python virtual environment..."
     python -m venv "$VENV_DIR"
     source "$VENV_DIR/bin/activate"
-    pip install pip setuptools wheel numpy opencv-python trame trame-vuetify trame-rca --upgrade
+    pip install pip setuptools wheel numpy opencv-python trame trame-vuetify trame-rca pandas matplotlib --upgrade
     pip install --no-binary :all: --compile mpi4py
 }
 
@@ -234,11 +234,11 @@ mkdir -p "$BUILD_DIR"
 update_sumodules
 load_modules
 setup_venv
-# build_ascent
+build_ascent
 
 # Build examples
-# setup_lbm_cfd
-# setup_nekibm
+setup_lbm_cfd
+setup_nekibm
 setup_bloodflow
 
 echo "Setup complete!"
