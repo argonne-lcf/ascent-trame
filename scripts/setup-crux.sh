@@ -19,6 +19,12 @@ NEKIBM_DIR="$EXAMPLES_DIR/nekIBM-ascent"
 NEKIBM_TOOLS_DIR="$NEKIBM_DIR/tools"
 SOURCEME_PATH="$NEKIBM_DIR/sourceme"
 MAKENEK_PATH="$NEKIBM_DIR/bin/makenek"
+BLOODFLOW_DIR="$EXAMPLES_DIR/bloodflow"
+
+function update_submodules() {
+    echo "Updating submodules..."
+    git submodule update --init --recursive
+}
 
 function load_modules() {
     echo "Loading required modules for crux..."
@@ -30,7 +36,7 @@ function setup_venv() {
     echo "Creating a new Python virtual environment..."
     python -m venv "$VENV_DIR"
     source "$VENV_DIR/bin/activate"
-    pip install pip setuptools wheel numpy opencv-python trame trame-vuetify trame-rca --upgrade
+    pip install pip setuptools wheel numpy opencv-python trame trame-vuetify trame-rca pandas matplotlib --upgrade
     pip install --no-binary :all: --compile mpi4py
 }
 
@@ -157,6 +163,66 @@ EOF
     "$MAKENEK_PATH" uniform
 }
 
+function setup_bloodflow() {
+    echo "Setting up nekIBM-ascent example..."
+
+    cd "$BLOODFLOW_DIR"
+    mkdir -p build
+    cd build
+    env Ascent_DIR="${ASCENT_INSTALL_DIR}/ascent-checkout/lib/cmake/ascent" cmake ..
+    make
+
+    cat << EOF > "$BLOODFLOW_DIR/build/examples/bidirectionalSingleCell/run-crux.sh"
+#!/bin/bash -l
+
+# Load required modules
+module use /soft/modulefiles
+module load spack-pe-base
+module load cmake
+module load PrgEnv-gnu
+module load cray-python
+
+# MPI and OpenMP Configuration
+NNODES=\$(wc -l < \$PBS_NODEFILE)
+NRANKS_PER_NODE=32
+NTHREADS=2
+NDEPTH=2
+NTOTRANKS=\$((NNODES * NRANKS_PER_NODE))
+
+echo "NUM_OF_NODES= \${NNODES}"
+echo "TOTAL_NUM_RANKS= \${NTOTRANKS}"
+echo "RANKS_PER_NODE= \${NRANKS_PER_NODE}"
+echo "THREADS_PER_RANK= \${NTHREADS}"
+
+# Activate Python Virtual Environment
+source "$VENV_DIR/bin/activate"
+
+# Set Python and Ascent Paths
+PYTHON_SITE_PKG="\${PYTHON_VENV_DIR}/lib/python3.11/site-packages"
+ASCENT_DIR="$ASCENT_INSTALL_DIR"
+export PYTHONPATH="\$PYTHONPATH:\$PYTHON_SITE_PKG:\$ASCENT_DIR/ascent-checkout/python-modules/:\$ASCENT_DIR/conduit-v0.9.2/python-modules/"
+
+# Start Trame Server in the Background
+nohup python trame/trame_app.py --host 0.0.0.0 --port 8888 --server --timeout 0 > trame.log 2>&1 &
+TRAME_PID=\$!
+trap "kill \$TRAME_PID" EXIT
+
+echo "---------------------------------------------------------------------------------"
+echo "To access the Trame server, copy and run this command in a local terminal:"
+echo "ssh -v -N -L 8888:\$(hostname):8888 \$USER@crux.alcf.anl.gov"
+echo "---------------------------------------------------------------------------------"
+
+# Pause for SSH command copying
+sleep 5
+
+# MPI Arguments
+MPI_ARGS="-n \${NTOTRANKS} --ppn \${NRANKS_PER_NODE} --depth=\${NDEPTH} --cpu-bind depth"
+OMP_ARGS="--env OMP_NUM_THREADS=\${NTHREADS} --env OMP_PROC_BIND=true --env OMP_PLACES=cores"
+mpiexec -n 1 ./bidirectionalCellFlow in.lmp4cell 10 1
+EOF
+    chmod +x "$BLOODFLOW_DIR/build/examples/bidirectionalSingleCell/run-crux.sh"
+}
+
 # Main Workflow
 echo "Setting up Ascent-Trame examples on crux"
 echo "This script assumes that you are running from a login node, since it requires internet access to download dependencies"
@@ -165,6 +231,7 @@ echo "This script assumes that you are running from a login node, since it requi
 
 echo "Preparing dependencies..."
 mkdir -p "$BUILD_DIR"
+update_submodules
 load_modules
 setup_venv
 build_ascent
@@ -172,5 +239,6 @@ build_ascent
 # Build examples
 setup_lbm_cfd
 setup_nekibm
+setup_bloodflow
 
 echo "Setup complete!"
