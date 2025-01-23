@@ -12,7 +12,7 @@ def main():
     )
     args = parser.parse_args()
 
-    data = np.loadtxt("particles-base.dat")
+    data = np.loadtxt("particles/particles-base.dat")
     result = data[data[:, 1] >= -3.2]
 
     # Pass xyz to Open3D.o3d.geometry.PointCloud and visualize

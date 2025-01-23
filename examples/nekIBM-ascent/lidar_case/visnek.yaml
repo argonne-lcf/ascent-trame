@@ -3,5 +3,5 @@
   commands:
     c1:
       params:
-        shell_command: visnek uniform
+        shell_command: ../bin/visnek uniform
         mpi_behavior: "root"

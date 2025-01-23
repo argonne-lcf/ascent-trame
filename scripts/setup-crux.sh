@@ -36,7 +36,7 @@ function setup_venv() {
     echo "Creating a new Python virtual environment..."
     python -m venv "$VENV_DIR"
     source "$VENV_DIR/bin/activate"
-    pip install pip setuptools wheel numpy opencv-python trame trame-vuetify trame-rca pandas matplotlib --upgrade
+    pip install pip setuptools wheel numpy opencv-python trame trame-vuetify trame-rca pandas matplotlib open3d --upgrade
     pip install --no-binary :all: --compile mpi4py
 }
 
@@ -109,7 +109,7 @@ echo "THREADS_PER_RANK= \${NTHREADS}"
 source "$VENV_DIR/bin/activate"
 
 # Set Python and Ascent Paths
-PYTHON_SITE_PKG="\${PYTHON_VENV_DIR}/lib/python3.11/site-packages"
+PYTHON_SITE_PKG="$PYTHON_VENV_DIR/lib/python3.11/site-packages"
 ASCENT_DIR="$ASCENT_INSTALL_DIR"
 export PYTHONPATH="\$PYTHONPATH:\$PYTHON_SITE_PKG:\$ASCENT_DIR/ascent-checkout/python-modules/:\$ASCENT_DIR/conduit-v0.9.2/python-modules/"
 
@@ -198,7 +198,7 @@ echo "THREADS_PER_RANK= \${NTHREADS}"
 source "$VENV_DIR/bin/activate"
 
 # Set Python and Ascent Paths
-PYTHON_SITE_PKG="\${PYTHON_VENV_DIR}/lib/python3.11/site-packages"
+PYTHON_SITE_PKG="$PYTHON_VENV_DIR/lib/python3.11/site-packages"
 ASCENT_DIR="$ASCENT_INSTALL_DIR"
 export PYTHONPATH="\$PYTHONPATH:\$PYTHON_SITE_PKG:\$ASCENT_DIR/ascent-checkout/python-modules/:\$ASCENT_DIR/conduit-v0.9.2/python-modules/"
 
