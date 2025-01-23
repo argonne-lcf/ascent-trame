@@ -109,7 +109,7 @@ echo "THREADS_PER_RANK= \${NTHREADS}"
 source "$VENV_DIR/bin/activate"
 
 # Set Python and Ascent Paths
-PYTHON_SITE_PKG="$PYTHON_VENV_DIR/lib/python3.11/site-packages"
+PYTHON_SITE_PKG="$VENV_DIR/lib/python3.11/site-packages"
 ASCENT_DIR="$ASCENT_INSTALL_DIR"
 export PYTHONPATH="\$PYTHONPATH:\$PYTHON_SITE_PKG:\$ASCENT_DIR/ascent-checkout/python-modules/:\$ASCENT_DIR/conduit-v0.9.2/python-modules/"
 
@@ -198,7 +198,7 @@ echo "THREADS_PER_RANK= \${NTHREADS}"
 source "$VENV_DIR/bin/activate"
 
 # Set Python and Ascent Paths
-PYTHON_SITE_PKG="$PYTHON_VENV_DIR/lib/python3.11/site-packages"
+PYTHON_SITE_PKG="$VENV_DIR/lib/python3.11/site-packages"
 ASCENT_DIR="$ASCENT_INSTALL_DIR"
 export PYTHONPATH="\$PYTHONPATH:\$PYTHON_SITE_PKG:\$ASCENT_DIR/ascent-checkout/python-modules/:\$ASCENT_DIR/conduit-v0.9.2/python-modules/"
 
@@ -234,11 +234,11 @@ mkdir -p "$BUILD_DIR"
 update_submodules
 load_modules
 setup_venv
-build_ascent
+# build_ascent
 
 # Build examples
-setup_lbm_cfd
-setup_nekibm
+# setup_lbm_cfd
+# setup_nekibm
 setup_bloodflow
 
 echo "Setup complete!"
