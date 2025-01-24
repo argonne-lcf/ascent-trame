@@ -234,11 +234,11 @@ mkdir -p "$BUILD_DIR"
 update_submodules
 load_modules
 setup_venv
-# build_ascent
+build_ascent
 
 # Build examples
-# setup_lbm_cfd
-# setup_nekibm
+setup_lbm_cfd
+setup_nekibm
 setup_bloodflow
 
 echo "Setup complete!"
