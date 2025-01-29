@@ -1,3 +1,7 @@
 [submodule "examples/bloodflow"]
 	path = examples/bloodflow
 	url = https://github.com/mvictoras/bloodflow.git
+[submodule "examples/ippl"]
+	path = examples/ippl
+	url = https://github.com/mvictoras/ippl.git
+	branch = insitu-ascent
