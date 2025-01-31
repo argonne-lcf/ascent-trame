@@ -5,18 +5,18 @@
 
 FILE_PATH=$(readlink -f "$0")
 BIN_DIR=$(dirname "$FILE_PATH")
-NEKIBM_DIR=$(dirname "$BIN_DIR")
-EXAMPLES_DIR=$(dirname "$NEKIBM_DIR")
+SOURCE_ROOT=$(dirname "$BIN_DIR")
+EXAMPLES_DIR=$(dirname "$SOURCE_ROOT")
 ASCENT_TRAME_ROOT=$(dirname "$EXAMPLES_DIR")
 
 # remove ascent build directory
-if [ -d "$NEKIBM_DIR/3rd_party/nek_ascent/build" ]; then
-    echo "Removing directory: $NEKIBM_DIR/3rd_party/nek_ascent/build"
+if [ -d "$SOURCE_ROOT/3rd_party/nek_ascent/build" ]; then
+    echo "Removing directory: $SOURCE_ROOT/3rd_party/nek_ascent/build"
     rm -rf "$SOURCE_ROOT/3rd_party/nek_ascent/build"
 fi
 
 # customize this file to load any necessary modules
-source $NEKIBM_ROOT/sourceme
+source $SOURCE_ROOT/sourceme
 
 # Fortran/C compiler
 FC="ftn"
@@ -43,7 +43,7 @@ set -e
 mver=17.0.4
 
 # set defaults
-: ${NEKIBM_ROOT:="$EXAMPLES_ROOT/nekIBM-ascent"}
+: ${SOURCE_ROOT:="$SOURCE_ROOT"}
 : ${FC:="mpif77"}
 : ${CC:="mpicc"}
 : ${MPI:=1}
@@ -54,12 +54,12 @@ mver=17.0.4
 
 # overwrite source path with optional 2nd argument
 if [ -d $2 ] && [ $# -eq 2 ]; then
-  NEKIBM_ROOT="$2"
-  echo "change source code directory to: ", $NEKIBM_ROOT
+  SOURCE_ROOT="$2"
+  echo "change source code directory to: ", $SOURCE_ROOT
 fi
 
 # create makefile
-source $NEKIBM_ROOT/core/makenek.inc
+source $SOURCE_ROOT/core/makenek.inc
 
 # compile 3rd_party code
 make_3rd_party 2>&1 | tee -a compiler.out
@@ -67,18 +67,20 @@ make_3rd_party 2>&1 | tee -a compiler.out
 # compile nek
 make -j6 -f makefile 2>&1 | tee -a compiler.out
 
-# create a better default session file
+# create a better default session file inside $1
 if [ -e "SESSION.NAME" ]; then
-  rm -f SESSION.NAME
+  rm -f "SESSION.NAME"
 fi
-echo $1 >> SESSION.NAME
-echo $PWD >> SESSION.NAME
+cat << EOF > SESSION.NAME
+$1
+$PWD
+EOF
 
 # Create run script
 if [ ! -e "run.sh" ]; then
 cat << EOF > run.sh
 #!/bin/bash
-source "$NEKIBM_ROOT/sourceme"
+source "$SOURCE_ROOT/sourceme"
 
 # Set Python and Ascent Paths
 PYTHON_SITE_PKG="$ASCENT_TRAME_ROOT/scripts/build/python-venv/lib/python3.11/site-packages"

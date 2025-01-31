@@ -147,7 +147,7 @@ function setup_nekibm() {
     echo "Running makenek..."
 
     cd "$NEKIBM_DIR/lidar_case"
-    "$MAKENEK_BIN" uniform
+    $MAKENEK_BIN uniform
 }
 
 function setup_bloodflow() {

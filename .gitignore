@@ -27,7 +27,7 @@ examples/nekIBM-ascent/lidar_case/compiler.out
 examples/nekIBM-ascent/lidar_case/makefile
 examples/nekIBM-ascent/lidar_case/nek5000
 examples/nekIBM-ascent/lidar_case/received/
-examples/nekIBM-ascent/lidar_case/run_crux.sh
+examples/nekIBM-ascent/lidar_case/run.sh
 examples/nekIBM-ascent/lidar_case/SESSION.NAME
 examples/nekIBM-ascent/lidar_case/trame.log
 examples/nekIBM-ascent/lidar_case/uniform.nek5000
