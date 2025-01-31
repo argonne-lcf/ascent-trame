@@ -1,6 +1,6 @@
 .vscode
 
-scripts/build-crux/
+scripts/build/
 
 examples/lbm-cfd/bin/
 examples/lbm-cfd/obj/
