@@ -5,3 +5,6 @@
 	path = examples/ippl
 	url = https://github.com/mvictoras/ippl.git
 	branch = insitu-ascent
+[submodule "examples/in-situ-particle-demo"]
+	path = examples/in-situ-particle-demo
+	url = https://github.com/mvictoras/in-situ-particle-demo.git
