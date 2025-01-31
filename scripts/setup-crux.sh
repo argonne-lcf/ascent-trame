@@ -18,8 +18,8 @@ LBMCFD_DIR="$EXAMPLES_DIR/lbm-cfd"
 NEKIBM_DIR="$EXAMPLES_DIR/nekIBM-ascent"
 NEKIBM_TOOLS_DIR="$NEKIBM_DIR/tools"
 SOURCEME_PATH="$NEKIBM_DIR/sourceme"
-MAKENEK_PATH="$NEKIBM_DIR/bin/makenek"
-BLOODFLOW_DIR="$EXAMPLES_DIR/bloodflow"
+MAKENEK_BIN="$NEKIBM_DIR/bin/makenek"
+BLOODFLOW_DIR="$EXAMPLES_DIR/bloFodflow"
 
 function update_submodules() {
     echo "Updating submodules..."
@@ -139,19 +139,6 @@ EOF
 function setup_nekibm() {
     echo "Setting up nekIBM-ascent example..."
 
-    echo "Creating sourceme file..."
-    rm -f "$SOURCEME_PATH"
-    cat << EOF > "$SOURCEME_PATH"
-# Modules required for nekIBM-ascent
-module use /soft/modulefiles
-module load spack-pe-base cmake PrgEnv-gnu cray-python
-source $VENV_DIR/bin/activate
-EOF
-
-    # Update makefile.template and makenek
-    sed -i "86s|include /path/to/ascent_config.mk|include ${ASCENT_CONFIG_MK}|" ${NEKIBM_DIR}/core/makefile.template
-    sed -i "29s|ASCENT_DIR=\"/path/to/ascent-checkout/lib/cmake/ascent\"|ASCENT_DIR=\"${ASCENT_INSTALL_DIR}/ascent-checkout/lib/cmake/ascent\"|" ${MAKENEK_PATH}
-
     # Build tools
     cd "$NEKIBM_TOOLS_DIR"
     ./maketools all
@@ -160,7 +147,7 @@ EOF
     echo "Running makenek..."
 
     cd "$NEKIBM_DIR/lidar_case"
-    "$MAKENEK_PATH" uniform
+    "$MAKENEK_BIN" uniform
 }
 
 function setup_bloodflow() {

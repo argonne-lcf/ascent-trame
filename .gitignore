@@ -1,7 +1,11 @@
+.vscode
+
 scripts/build-crux/
 
 examples/lbm-cfd/bin/
 examples/lbm-cfd/obj/
+examples/lbm-cfd/run-crux.sh
+examples/lbm-cfd/trame.log
 
 examples/nekIBM-ascent/3rd_party/gslib/v1.0.1.tar.gz
 examples/nekIBM-ascent/3rd_party/gslib/gslib-1.0.1/
@@ -17,3 +21,20 @@ examples/nekIBM-ascent/bin/pretex
 examples/nekIBM-ascent/bin/prex
 examples/nekIBM-ascent/bin/re2torea
 examples/nekIBM-ascent/bin/reatore2
+examples/nekIBM-ascent/lidar_case/obj
+examples/nekIBM-ascent/lidar_case/.state
+examples/nekIBM-ascent/lidar_case/compiler.out
+examples/nekIBM-ascent/lidar_case/makefile
+examples/nekIBM-ascent/lidar_case/nek5000
+examples/nekIBM-ascent/lidar_case/received/
+examples/nekIBM-ascent/lidar_case/run_crux.sh
+examples/nekIBM-ascent/lidar_case/SESSION.NAME
+examples/nekIBM-ascent/lidar_case/trame.log
+examples/nekIBM-ascent/lidar_case/uniform.nek5000
+examples/nekIBM-ascent/tools/amg_hypre/amg_hypre.o
+examples/nekIBM-ascent/tools/amg_hypre/hypre/hypre/
+examples/nekIBM-ascent/tools/amg_hypre/hypre/include/
+examples/nekIBM-ascent/tools/amg_hypre/hypre/lib/
+examples/nekIBM-ascent/tools/genmap/*.o
+examples/nekIBM-ascent/tools/nekmerge/*.o
+examples/nekIBM-ascent/tools/prenek/*.o

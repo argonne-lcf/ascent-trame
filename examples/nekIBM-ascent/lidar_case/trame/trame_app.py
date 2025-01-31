@@ -80,6 +80,12 @@ def runTrameServer(state_queue, update_queue):
                 updates["reduce_particles"] = float(state.voxel_size_input)
             except ValueError:
                 pass
+
+        if state.tree_offset:
+            try:
+                updates["tree_offset"] = float(state.tree_offset)
+            except ValueError:
+                pass
         update_queue.put(updates)
 
     def loadFrame(**kwargs):
@@ -128,6 +134,16 @@ def runTrameServer(state_queue, update_queue):
                 dense=True,
             )
             vuetify.VSpacer()
+            vuetify.VSlider(
+                label='Tree Position',
+                v_model=('tree_offset', 0),
+                min=-1,
+                max=2,
+                step=0.05,
+                hide_details=True,
+                dense=True
+            )
+            vuetify.VSpacer()
             vuetify.VTextField(
                 label="Adjust Voxel Size",
                 v_model=("voxel_size_input", ""),
@@ -146,7 +162,7 @@ def runTrameServer(state_queue, update_queue):
             vuetify.VSpacer()
             vuetify.VSelect(
                 label="Phi",
-                v_model=("selected_phi", ""),
+                v_model=("selected_phi", "90.0"),
                 items=("phi_values",),
                 hide_details=True,
                 dense=True,
@@ -154,7 +170,7 @@ def runTrameServer(state_queue, update_queue):
             vuetify.VSpacer()
             vuetify.VSelect(
                 label="Theta",
-                v_model=("selected_theta", ""),
+                v_model=("selected_theta", "90.0"),
                 items=("theta_values",),
                 hide_details=True,
                 dense=True,

@@ -6,9 +6,16 @@ import open3d as o3d
 def main():
     parser = argparse.ArgumentParser(description="Generate a particles1.dat file")
     parser.add_argument(
-        "voxel_size",
+        "--voxel_size",
         type=float,
         help="The voxel size to use when downsampling",
+        default=2.0,
+    )
+    parser.add_argument(
+        "--tree_offset",
+        type=float,
+        help="The voxel size to use when downsampling",
+        default=0.0,
     )
     args = parser.parse_args()
 
@@ -53,6 +60,9 @@ def main():
 
     # Adjust z coordinates to start from 0
     xyz_downsampled[:, 2] -= np.min(xyz_downsampled[:, 2])
+
+    # Offset the x coordinates by the tree_offset
+    xyz_downsampled[:, 0] += args.tree_offset
 
     # The float number 'a' as input, representing the diameter in this context
     a = 0.8E-3  # Example value, adjust as needed or prompt the user

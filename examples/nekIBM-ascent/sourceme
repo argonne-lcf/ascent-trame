@@ -1,0 +1,12 @@
+# Modules required for nekIBM-ascent
+module use /soft/modulefiles
+module load spack-pe-base cmake PrgEnv-gnu cray-python
+
+FILE_PATH=$(readlink -f "$0")
+NEKIBM_DIR=$(dirname "$FILE_PATH")
+EXAMPLES_DIR=$(dirname "$NEKIBM_DIR")
+ASCENT_TRAME_ROOT=$(dirname "$EXAMPLES_DIR")
+
+source "$ASCENT_TRAME_ROOT/scripts/build-crux/python-venv/bin/activate"
+export NEK5000_HOME="$NEKIBM_ROOT"
+export PATH="$PATH:$ASCENT_TRAME_ROOT/examples/nekIBM-ascent/bin"

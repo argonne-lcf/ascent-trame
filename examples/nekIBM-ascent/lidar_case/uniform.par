@@ -2,7 +2,7 @@
 variableDT = yes
 dt = 1.0E-2
 targetcfl = 0.6
-writeinterval = 1000
+writeinterval = 25
 numsteps = 6001
 
 

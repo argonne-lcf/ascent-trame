@@ -3,18 +3,20 @@
 # Nek5000 config file
 #-------------------------------------------------------------------------------
 
-SCRIPT_PATH=$(readlink -f "$0")
-SCRIPT_DIR=$(dirname "$SCRIPT_PATH")
-SOURCE_ROOT=$(dirname "$SCRIPT_DIR")
+FILE_PATH=$(readlink -f "$0")
+BIN_DIR=$(dirname "$FILE_PATH")
+NEKIBM_DIR=$(dirname "$BIN_DIR")
+EXAMPLES_DIR=$(dirname "$NEKIBM_DIR")
+ASCENT_TRAME_ROOT=$(dirname "$EXAMPLES_DIR")
 
 # remove ascent build directory
-# if [ -d "$SOURCE_ROOT/3rd_party/nek_ascent/build" ]; then
-#     echo "Removing directory: $SOURCE_ROOT/3rd_party/nek_ascent/build"
-#     rm -rf "$SOURCE_ROOT/3rd_party/nek_ascent/build"
-# fi
+if [ -d "$NEKIBM_DIR/3rd_party/nek_ascent/build" ]; then
+    echo "Removing directory: $NEKIBM_DIR/3rd_party/nek_ascent/build"
+    rm -rf "$SOURCE_ROOT/3rd_party/nek_ascent/build"
+fi
 
 # customize this file to load any necessary modules
-source $SOURCE_ROOT/sourceme
+source $NEKIBM_ROOT/sourceme
 
 # Fortran/C compiler
 FC="ftn"
@@ -26,7 +28,7 @@ PPLIST="LPM"
 
 # Ascent cmake directory
 ASCENT=1
-ASCENT_DIR="/home/siramok/crux/ascent-trame/scripts/build-crux/ascent/scripts/build_ascent/install/ascent-checkout/lib/cmake/ascent"
+ASCENT_DIR=$ASCENT_TRAME_ROOT/scripts/build-crux/ascent/scripts/build_ascent/install/ascent-checkout/lib/cmake/ascent
 
 # optional compiler flags
 FFLAGS="-march=native -std=legacy -mcmodel=large"
@@ -41,7 +43,7 @@ set -e
 mver=17.0.4
 
 # set defaults
-: ${SOURCE_ROOT:="$INSTALL_DIR/nekIBM-ascent"}
+: ${NEKIBM_ROOT:="$EXAMPLES_ROOT/nekIBM-ascent"}
 : ${FC:="mpif77"}
 : ${CC:="mpicc"}
 : ${MPI:=1}
@@ -52,12 +54,12 @@ mver=17.0.4
 
 # overwrite source path with optional 2nd argument
 if [ -d $2 ] && [ $# -eq 2 ]; then
-  SOURCE_ROOT="$2"
-  echo "change source code directory to: ", $SOURCE_ROOT
+  NEKIBM_ROOT="$2"
+  echo "change source code directory to: ", $NEKIBM_ROOT
 fi
 
 # create makefile
-source $SOURCE_ROOT/core/makenek.inc
+source $NEKIBM_ROOT/core/makenek.inc
 
 # compile 3rd_party code
 make_3rd_party 2>&1 | tee -a compiler.out
@@ -66,23 +68,39 @@ make_3rd_party 2>&1 | tee -a compiler.out
 make -j6 -f makefile 2>&1 | tee -a compiler.out
 
 # create a better default session file
-if [ ! -e "SESSION.NAME" ]; then
-  echo $1 >> SESSION.NAME
-  echo $PWD >> SESSION.NAME
+if [ -e "SESSION.NAME" ]; then
+  rm -f SESSION.NAME
 fi
-
-# copy Ascent runtime files into the cwd
-cp -R $SOURCE_ROOT/3rd_party/nek_ascent/runtime_files/* .
+echo $1 >> SESSION.NAME
+echo $PWD >> SESSION.NAME
 
 # Create run script
 if [ ! -e "run_crux.sh" ]; then
 cat << EOF > run_crux.sh
 #!/bin/bash
-source $SOURCE_ROOT/sourceme
-if [ -e "ascent_actions.yaml" ]; then
-  rm ascent_actions.yaml
-fi
-cp terminal.yaml ascent_actions.yaml
+source "$NEKIBM_ROOT/sourceme"
+
+# Set Python and Ascent Paths
+PYTHON_SITE_PKG="$ASCENT_TRAME_ROOT/scripts/build-crux/python-venv/lib/python3.11/site-packages"
+ASCENT_DIR="$ASCENT_TRAME_ROOT/scripts/build-crux/ascent/scripts/build_ascent/install"
+export PYTHONPATH="$PYTHONPATH:$PYTHON_SITE_PKG:$ASCENT_DIR/ascent-checkout/python-modules/:$ASCENT_DIR/conduit-v0.9.2/python-modules/"
+
+# Clean up previous run
+./clean.sh
+
+# Start Trame Server in the Background
+nohup python trame/trame_app.py --host 0.0.0.0 --port 8888 --server --timeout 0 > trame.log 2>&1 &
+TRAME_PID=$!
+trap "kill $TRAME_PID" EXIT
+
+echo "---------------------------------------------------------------------------------"
+echo "To access the Trame server, copy and run this command in a local terminal:"
+echo "ssh -v -N -L 8888:$(hostname):8888 $USER@crux.alcf.anl.gov"
+echo "---------------------------------------------------------------------------------"
+
+# Pause for SSH command copying
+sleep 5
+
 NODES=\`wc -l < \$PBS_NODEFILE\`
 RANKS_PER_NODE=32
 TOTAL_RANKS=\$(( \$NODES * \$RANKS_PER_NODE ))

@@ -200,14 +200,10 @@ void reduce_particles(conduit::Node &params, conduit::Node &output)
     }
 
     bool success = true;
-    float voxel_size;
+    float voxel_size = 2.0;
+    float tree_offset = 0;
 
-    if (!params.has_path("voxel_size"))
-    {
-        std::cout << "MissingParam: voxel_size is a required parameter but was not found" << std::endl;
-        success = false;
-    }
-    else
+    if (params.has_path("voxel_size"))
     {
         try
         {
@@ -225,13 +221,26 @@ void reduce_particles(conduit::Node &params, conduit::Node &output)
         }
     }
 
+    if (params.has_path("tree_offset"))
+    {
+        try
+        {
+            tree_offset = params["tree_offset"].as_float64();
+        }
+        catch (const std::exception &e)
+        {
+            std::cout << "ParamError: tree_offset must be numeric" << std::endl;
+            success = false;
+        }
+    }
+
     if (!success)
     {
         output["success"] = "no";
         return;
     }
 
-    std::string command = "python generate_particles1.py " + std::to_string(voxel_size);
+    std::string command = "python generate_particles1.py --voxel_size " + std::to_string(voxel_size) + " --tree_offset " + std::to_string(tree_offset);
     std::system(command.c_str());
 
     output["success"] = "yes";

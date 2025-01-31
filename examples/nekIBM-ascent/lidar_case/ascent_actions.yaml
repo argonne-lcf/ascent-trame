@@ -3,17 +3,17 @@
   triggers:
     t1:
         params:
-          condition: "cycle() % 20 == 0"
+          condition: "cycle() % 25 == 0"
           actions_file : "field.yaml"
     t2:
       params:
-        condition: "cycle() % 20 == 0"
+        condition: "cycle() % 25 == 0"
         actions_file : "visnek.yaml"
     t3:
       params:
-        condition: "cycle() % 20 == 0"
+        condition: "cycle() % 25 == 0"
         actions_file : "cinema.yaml"
     t4:
       params:
-        condition: "cycle() % 20 == 0"
+        condition: "cycle() % 25 == 0"
         actions_file : "trame.yaml"

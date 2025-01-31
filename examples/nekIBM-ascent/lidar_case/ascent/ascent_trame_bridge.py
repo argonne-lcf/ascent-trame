@@ -92,14 +92,22 @@ def executeMainTask(comm):
         update_node = conduit.Node()
         output_node = conduit.Node()
 
-        if "reduce_particles" in update_data:
-            print("Reducing particles")
-            update_node["voxel_size"] = update_data["reduce_particles"]
+        if "reduce_particles" in update_data or "tree_offset" in update_data:
+            if "reduce_particles" in update_data:
+                update_node["voxel_size"] = float(update_data["reduce_particles"])
+            else:
+                update_node["voxel_size"] = 2.0
+
+            if "tree_offset" in update_data:
+                update_node["tree_offset"] = float(update_data["tree_offset"])
+            else:
+                update_node["tree_offset"] = 0.0
+
             ascent.mpi.execute_callback("reduce_particles", update_node, output_node)
+            print("reduce_particles returned")
             ascent.mpi.execute_callback("load_new_data", update_node, output_node)
-            print("Reloaded new particle dataset")
-
-
+            print("load_new_data returned")
+    print("Main task completed.")
     return update_data
 
 
