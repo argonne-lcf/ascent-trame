@@ -7,7 +7,7 @@ SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
 ROOT_DIR=$(dirname "$SCRIPT_DIR")
 # TODO: combine into one for readability?
 
-BUILD_DIR=$SCRIPT_DIR/build-crux
+BUILD_DIR=$SCRIPT_DIR/build
 VENV_DIR=$BUILD_DIR/python-venv
 ASCENT_INSTALL_DIR=$BUILD_DIR/ascent/scripts/build_ascent/install
 ASCENT_CONFIG_MK=$ASCENT_INSTALL_DIR/ascent-checkout/share/ascent/ascent_config.mk
@@ -19,7 +19,7 @@ NEKIBM_DIR="$EXAMPLES_DIR/nekIBM-ascent"
 NEKIBM_TOOLS_DIR="$NEKIBM_DIR/tools"
 SOURCEME_PATH="$NEKIBM_DIR/sourceme"
 MAKENEK_BIN="$NEKIBM_DIR/bin/makenek"
-BLOODFLOW_DIR="$EXAMPLES_DIR/bloFodflow"
+BLOODFLOW_DIR="$EXAMPLES_DIR/bloodflow"
 
 function update_submodules() {
     echo "Updating submodules..."
@@ -227,5 +227,4 @@ build_ascent
 setup_lbm_cfd
 setup_nekibm
 setup_bloodflow
-
 echo "Setup complete!"

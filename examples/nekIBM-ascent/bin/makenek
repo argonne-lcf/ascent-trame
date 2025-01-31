@@ -28,7 +28,7 @@ PPLIST="LPM"
 
 # Ascent cmake directory
 ASCENT=1
-ASCENT_DIR=$ASCENT_TRAME_ROOT/scripts/build-crux/ascent/scripts/build_ascent/install/ascent-checkout/lib/cmake/ascent
+ASCENT_DIR=$ASCENT_TRAME_ROOT/scripts/build/ascent/scripts/build_ascent/install/ascent-checkout/lib/cmake/ascent
 
 # optional compiler flags
 FFLAGS="-march=native -std=legacy -mcmodel=large"
@@ -75,14 +75,14 @@ echo $1 >> SESSION.NAME
 echo $PWD >> SESSION.NAME
 
 # Create run script
-if [ ! -e "run_crux.sh" ]; then
-cat << EOF > run_crux.sh
+if [ ! -e "run.sh" ]; then
+cat << EOF > run.sh
 #!/bin/bash
 source "$NEKIBM_ROOT/sourceme"
 
 # Set Python and Ascent Paths
-PYTHON_SITE_PKG="$ASCENT_TRAME_ROOT/scripts/build-crux/python-venv/lib/python3.11/site-packages"
-ASCENT_DIR="$ASCENT_TRAME_ROOT/scripts/build-crux/ascent/scripts/build_ascent/install"
+PYTHON_SITE_PKG="$ASCENT_TRAME_ROOT/scripts/build/python-venv/lib/python3.11/site-packages"
+ASCENT_DIR="$ASCENT_TRAME_ROOT/scripts/build/ascent/scripts/build_ascent/install"
 export PYTHONPATH="$PYTHONPATH:$PYTHON_SITE_PKG:$ASCENT_DIR/ascent-checkout/python-modules/:$ASCENT_DIR/conduit-v0.9.2/python-modules/"
 
 # Clean up previous run
@@ -107,7 +107,7 @@ TOTAL_RANKS=\$(( \$NODES * \$RANKS_PER_NODE ))
 mpiexec -n \$TOTAL_RANKS -ppn \$RANKS_PER_NODE ./nek5000
 
 EOF
-chmod +x run_crux.sh
+chmod +x run.sh
 fi
 
 exit 0

@@ -6,12 +6,12 @@ MAXNEL=300000
 # binary path
 #bin_nek_tools=`cd ../bin && pwd`
 
-SCRIPT_PATH=$(readlink -f "$0")
-SCRIPT_DIR=$(dirname "$SCRIPT_PATH")
-SOURCE_ROOT=$(dirname "$SCRIPT_DIR")
+FILE_PATH=$(readlink -f "$0")
+NEKIBM_TOOLS_DIR=$(dirname "$FILE_PATH")
+NEKIBM_DIR=$(dirname "$NEKIBM_TOOLS_DIR")
 
 # customize this file to load any necessary modules
-source $SOURCE_ROOT/sourceme
+source $NEKIBM_DIR/sourceme
 
 # Fortran compiler
 FC=$(which ftn)
@@ -23,38 +23,6 @@ CC=$(which cc)
 
 # linking flags
 #LDFLAGS="-L$HOME/lib -lm"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ### don't touch this section ###############################
 
