@@ -77,7 +77,9 @@ $PWD
 EOF
 
 # Create run script
-if [ ! -e "run.sh" ]; then
+if [ -e "run.sh" ]; then
+  rm -f "run.sh"
+fi
 cat << EOF > run.sh
 #!/bin/bash
 source "$SOURCE_ROOT/sourceme"
@@ -97,7 +99,7 @@ trap "kill $TRAME_PID" EXIT
 
 echo "---------------------------------------------------------------------------------"
 echo "To access the Trame server, copy and run this command in a local terminal:"
-echo "ssh -v -N -L 8888:$(hostname):8888 $USER@crux.alcf.anl.gov"
+echo "ssh -v -N -L 8888:\$(hostname):8888 $USER@crux.alcf.anl.gov"
 echo "---------------------------------------------------------------------------------"
 
 # Pause for SSH command copying
@@ -110,6 +112,5 @@ mpiexec -n \$TOTAL_RANKS -ppn \$RANKS_PER_NODE ./nek5000
 
 EOF
 chmod +x run.sh
-fi
 
 exit 0
