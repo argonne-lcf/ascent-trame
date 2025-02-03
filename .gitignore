@@ -31,6 +31,7 @@ examples/nekIBM-ascent/lidar_case/run.sh
 examples/nekIBM-ascent/lidar_case/SESSION.NAME
 examples/nekIBM-ascent/lidar_case/trame.log
 examples/nekIBM-ascent/lidar_case/uniform.nek5000
+examples/nekIBM-ascent/lidar_case/uniform.f
 examples/nekIBM-ascent/tools/amg_hypre/amg_hypre.o
 examples/nekIBM-ascent/tools/amg_hypre/hypre/hypre/
 examples/nekIBM-ascent/tools/amg_hypre/hypre/include/

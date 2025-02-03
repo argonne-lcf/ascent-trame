@@ -267,7 +267,7 @@ c         enddo
       if(interm_vel.ge.1) call ibm_interm_vel
 
       call avg_all()
-      param(68)=1000
+      param(68)=25
 
       return
       end
@@ -747,6 +747,7 @@ C
       RETURN
       END
 c-----------------------------------------------------------------------
+
 c automatically added by makenek
       subroutine usrsetvert(glo_num,nel,nx,ny,nz) ! to modify glo_num
       integer*8 glo_num(1)

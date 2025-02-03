@@ -75,9 +75,9 @@ def runTrameServer(state_queue, update_queue):
     def submitSteeringOptions():
         updates = {}
 
-        if state.voxel_size_input:
+        if state.voxel_size:
             try:
-                updates["reduce_particles"] = float(state.voxel_size_input)
+                updates["reduce_particles"] = float(state.voxel_size)
             except ValueError:
                 pass
 
@@ -99,7 +99,7 @@ def runTrameServer(state_queue, update_queue):
         time = state.selected_time
         phi = state.selected_phi
         theta = state.selected_theta
-        image_path = f"received/ascent-trame/{time}/{phi}_{theta}_ascent-trame.png"
+        image_path = f"cinema_databases/ascent-trame/{time}/{phi}_{theta}_ascent-trame.png"
         print(f"Checking for image: {image_path}")
         if os.path.exists(image_path):
             print(f"Loading frame: time={time}, phi={phi}, theta={theta}")
@@ -121,7 +121,7 @@ def runTrameServer(state_queue, update_queue):
 
     # define webpage layout
     state.allow_submit = False
-    state.vis_style = "width: 1024px; height: 1024px; border: solid 2px #000000; box-sizing: content-box;"
+    state.vis_style = "width: 1280px; height: 720px; border: solid 2px #000000; box-sizing: content-box;"
     with SinglePageLayout(server) as layout:
         client.Style("#rca-view div div img { width: 100%; height: auto; }")
         layout.title.set_text("Ascent-Trame")
@@ -134,19 +134,24 @@ def runTrameServer(state_queue, update_queue):
                 dense=True,
             )
             vuetify.VSpacer()
-            vuetify.VSlider(
-                label='Tree Position',
-                v_model=('tree_offset', 0),
-                min=-1,
-                max=2,
-                step=0.05,
-                hide_details=True,
-                dense=True
+            vuetify.VBtn(
+                "Submit",
+                color="primary",
+                disabled=("!allow_submit",),
+                click=submitSteeringOptions,
             )
             vuetify.VSpacer()
             vuetify.VTextField(
-                label="Adjust Voxel Size",
-                v_model=("voxel_size_input", ""),
+                label="Tree Offset",
+                v_model=("tree_offset", ""),
+                hide_details=True,
+                dense=True,
+                type="number",
+            )
+            vuetify.VSpacer()
+            vuetify.VTextField(
+                label="Voxel Size",
+                v_model=("voxel_size", ""),
                 hide_details=True,
                 dense=True,
                 type="number",
@@ -175,13 +180,6 @@ def runTrameServer(state_queue, update_queue):
                 hide_details=True,
                 dense=True,
             )
-            vuetify.VSpacer()
-            vuetify.VBtn(
-                "Submit",
-                color="primary",
-                disabled=("!allow_submit",),
-                click=submitSteeringOptions,
-            )
         with layout.content:
             with vuetify.VContainer(
                 fluid=True,
@@ -207,17 +205,8 @@ async def checkForStateUpdates(state, state_queue, update_queue, view, view_hand
                 print("Steering enabled")
                 state.allow_submit = True
 
-            if "zip_content" in state_data:
-                receive_dir = "received"
-                zip_path = os.path.join(receive_dir, "cinema_data.zip")
-                print(f"Received zip file: {zip_path}")
-                os.makedirs(receive_dir, exist_ok=True)
-                with open(zip_path, "wb") as f:
-                    f.write(state_data["zip_content"])
-                with zipfile.ZipFile(zip_path, "r") as zip_ref:
-                    zip_ref.extractall(receive_dir)
-
-                csv_path = os.path.join(receive_dir, "ascent-trame/data.csv")
+            if "new_timestep" in state_data:
+                csv_path = "cinema_databases/ascent-trame/data.csv"
                 print(f"Loading CSV file: {csv_path}")
                 if os.path.exists(csv_path):
                     cinema_data = pd.read_csv(csv_path)
@@ -239,8 +228,7 @@ async def checkForStateUpdates(state, state_queue, update_queue, view, view_hand
                         }
                     )
 
-                    if state.selected_time == "":
-                        state.selected_time = state.timestep_values[0]["value"]
+                    state.selected_time = state.timestep_values[-1]["value"]
 
                     if state.selected_phi == "":
                         state.selected_phi = state.phi_values[0]["value"]
@@ -280,8 +268,8 @@ class RcaViewAdapter:
         self._metadata = {
             "type": "image/jpeg",
             "codec": "",
-            "w": 0,
-            "h": 0,
+            "w": 1280,
+            "h": 720,
             "st": 0,
             "key": "key",
         }
@@ -313,8 +301,8 @@ class RcaViewAdapter:
         }
 
     def update_size(self, origin, size):
-        width = int(size.get("w", 400))
-        height = int(size.get("h", 300))
+        width = int(size.get("w", 1280))
+        height = int(size.get("h", 720))
         print(f"new size: {width}x{height}")
 
     def on_interaction(self, origin, event):

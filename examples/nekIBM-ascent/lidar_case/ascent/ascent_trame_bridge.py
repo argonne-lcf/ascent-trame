@@ -12,23 +12,19 @@ import yaml
 
 from mpi4py import MPI
 
-sys.path.append(
-    f"../../.venv/lib/python{sys.version_info.major}.{sys.version_info.minor}/site-packages"
-)
-
 
 class QueueManager(BaseManager):
     pass
 
 
 def main():
-    # obtain a mpi4py mpi comm object
+    # Obtain a mpi4py MPI comm object
     comm = MPI.Comm.f2py(ascent_mpi_comm_id())
 
-    # get task id and number of total tasks
+    # Get task id and number of total tasks
     task_id = comm.Get_rank()
 
-    # run Trame tasks
+    # Run Trame tasks
     interactive = np.array([False], bool)
     update_data = None
     if task_id == 0:
@@ -36,25 +32,34 @@ def main():
     else:
         executeDependentTask(comm)
 
-    # broadcast updates to all ranks
+    # Broadcast updates to all ranks
     update_data = comm.bcast(update_data, root=0)
 
+    # All ranks process the update_data and execute callbacks
+    if update_data is not None and ("reduce_particles" in update_data or "tree_offset" in update_data):
+        update_node = conduit.Node()
+        output_node = conduit.Node()
 
-# Realized that the client is pretty much always going to run where the server is, making this not necessary
-def create_zip_file(source_dir, zip_name="cinema_data.zip"):
-    with zipfile.ZipFile(zip_name, "w") as zipf:
-        for root, _, files in os.walk(source_dir):
-            for file in files:
-                file_path = os.path.join(root, file)
-                zipf.write(file_path, arcname=os.path.relpath(file_path, source_dir))
-    return zip_name
+        if "reduce_particles" in update_data:
+            update_node["voxel_size"] = float(update_data["reduce_particles"])
+        else:
+            update_node["voxel_size"] = 1.0
+
+        if "tree_offset" in update_data:
+            update_node["tree_offset"] = float(update_data["tree_offset"])
+        else:
+            update_node["tree_offset"] = 0.0
+
+        # Execute the callbacks on all ranks
+        ascent.mpi.execute_callback("reduce_particles", update_node, output_node)
+        ascent.mpi.execute_callback("load_new_data", update_node, output_node)
 
 
 def executeMainTask(comm):
     interactive = np.array([False], bool)
     update_data = {}
 
-    # attempt to connect to Trame queue manager
+    # Attempt to connect to Trame queue manager
     QueueManager.register("get_data_queue")
     QueueManager.register("get_signal_queue")
     mgr = QueueManager(address=("127.0.0.1", 8000), authkey=b"ascent-trame")
@@ -65,60 +70,25 @@ def executeMainTask(comm):
         print(f"Failed to connect to Trame queue manager: {e}")
         mgr = None
 
-    # broadcast to all processes whether Trame is currently running
+    # Broadcast to all processes whether Trame is currently running
     comm.Bcast((interactive, 1, MPI.BOOL), root=0)
 
     if interactive[0]:
         queue_data = mgr.get_data_queue()
         queue_signal = mgr.get_signal_queue()
 
-        zip_file = create_zip_file("cinema_databases")
-        if not os.path.exists(zip_file):
-            print(f"Zip file creation failed: {zip_file} not found.")
-            return
-        print(f"Zip file created at: {zip_file}")
-
-        try:
-            with open(zip_file, "rb") as f:
-                zip_data = f.read()
-                queue_data.put({"zip_content": zip_data})
-                os.remove(zip_file)
-            print("Zip file sent to server.")
-        except Exception as e:
-            print(f"Failed to send zip file: {e}")
-
+        # Signal Trame that new cinema data is available
+        queue_data.put({"new_timestep": True})
         update_data = queue_signal.get()
 
-        update_node = conduit.Node()
-        output_node = conduit.Node()
-
-        if "reduce_particles" in update_data or "tree_offset" in update_data:
-            if "reduce_particles" in update_data:
-                update_node["voxel_size"] = float(update_data["reduce_particles"])
-            else:
-                update_node["voxel_size"] = 2.0
-
-            if "tree_offset" in update_data:
-                update_node["tree_offset"] = float(update_data["tree_offset"])
-            else:
-                update_node["tree_offset"] = 0.0
-
-            ascent.mpi.execute_callback("reduce_particles", update_node, output_node)
-            print("reduce_particles returned")
-            ascent.mpi.execute_callback("load_new_data", update_node, output_node)
-            print("load_new_data returned")
     print("Main task completed.")
     return update_data
 
 
 def executeDependentTask(comm):
     interactive = np.array([False], bool)
-
-    # receive whether session is interactive or not from main task
+    # Receive whether session is interactive or not from main task
     comm.Bcast((interactive, 1, MPI.BOOL), root=0)
-
-    if interactive[0]:
-        pass
 
 
 if __name__ == "__main__":
