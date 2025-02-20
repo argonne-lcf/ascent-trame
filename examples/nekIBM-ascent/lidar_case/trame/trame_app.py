@@ -77,15 +77,22 @@ def runTrameServer(state_queue, update_queue):
 
         if state.voxel_size:
             try:
-                updates["reduce_particles"] = float(state.voxel_size)
+                updates["voxel_size"] = float(state.voxel_size)
             except ValueError:
                 pass
 
-        if state.tree_offset:
+        if state.offset_x:
             try:
-                updates["tree_offset"] = float(state.tree_offset)
+                updates["offset_x"] = float(state.offset_x)
             except ValueError:
                 pass
+
+        if state.offset_y:
+            try:
+                updates["offset_y"] = float(state.offset_y)
+            except ValueError:
+                pass
+
         update_queue.put(updates)
 
     def loadFrame(**kwargs):
@@ -131,7 +138,7 @@ def runTrameServer(state_queue, update_queue):
                 label="Enable Steering",
                 v_model=("enable_steering", True),
                 hide_details=True,
-                dense=True,
+                dense=False,
             )
             vuetify.VSpacer()
             vuetify.VBtn(
@@ -142,10 +149,18 @@ def runTrameServer(state_queue, update_queue):
             )
             vuetify.VSpacer()
             vuetify.VTextField(
-                label="Tree Offset",
-                v_model=("tree_offset", ""),
+                label="X Offset",
+                v_model=("offset_x", ""),
                 hide_details=True,
-                dense=True,
+                dense=False,
+                type="number",
+            )
+            vuetify.VSpacer()
+            vuetify.VTextField(
+                label="Y Offset",
+                v_model=("offset_y", ""),
+                hide_details=True,
+                dense=False,
                 type="number",
             )
             vuetify.VSpacer()
@@ -153,7 +168,7 @@ def runTrameServer(state_queue, update_queue):
                 label="Voxel Size",
                 v_model=("voxel_size", ""),
                 hide_details=True,
-                dense=True,
+                dense=False,
                 type="number",
             )
             vuetify.VSpacer()
@@ -162,7 +177,7 @@ def runTrameServer(state_queue, update_queue):
                 v_model=("selected_time", ""),
                 items=("timestep_values",),
                 hide_details=True,
-                dense=True,
+                dense=False,
             )
             vuetify.VSpacer()
             vuetify.VSelect(
@@ -170,7 +185,7 @@ def runTrameServer(state_queue, update_queue):
                 v_model=("selected_phi", "90.0"),
                 items=("phi_values",),
                 hide_details=True,
-                dense=True,
+                dense=False,
             )
             vuetify.VSpacer()
             vuetify.VSelect(
@@ -178,7 +193,7 @@ def runTrameServer(state_queue, update_queue):
                 v_model=("selected_theta", "90.0"),
                 items=("theta_values",),
                 hide_details=True,
-                dense=True,
+                dense=False,
             )
         with layout.content:
             with vuetify.VContainer(
