@@ -2,9 +2,9 @@
 variableDT = yes
 dt = 1.0E-2
 targetcfl = 0.6
-writeinterval = 25
-numsteps = 6001
-
+writeinterval = 100
+numsteps = 1000
+startFrom = developed.f9
 
 dealiasing = yes
 filtering = hpfrt #hpfrt, none, explicit

@@ -258,7 +258,7 @@ c         enddo
       IBM_marker_shape     = 2  ! marker volume 1 - 2D circular disk, 2 - sphere, 0 traditional particle
       ipart_moving     	   = 0  ! stationary particles for debug only
 
-      !call lpm_user_particle_distribution
+      call lpm_user_particle_distribution
 
       interm_vel = 1
       !     =  0 use previous step veloicity;
@@ -311,8 +311,6 @@ c-----------------------------------------------------------------------
       subroutine usrdat
       include 'SIZE'
       include 'TOTAL'
-
-      call lpm_user_particle_distribution
 
       return
       end

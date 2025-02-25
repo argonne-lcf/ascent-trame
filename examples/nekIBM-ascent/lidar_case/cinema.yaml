@@ -1,109 +1,76 @@
 - 
   action: "add_pipelines"
-  pipelines: 
-    pl1:
-      f1: 
+  pipelines:
+    pl_main:
+      f1:
         type: "vector_magnitude"
-        params: 
+        params:
           field: "velocity"
           output_name: "velocity_mag"
-      f2: 
+      f2:
         type: "recenter"
-        params: 
+        params:
           field: "velocity_mag"
           association: "element"
-      f3: 
-        type: "3slice"
-        params: 
-          x_offset: -0.24
-          y_offset: -0.42
-          z_offset: -0.7
-    pl2:
-      f1: 
+      f3:
+        type: "slice"
+        params:
+          point:
+            x: -0.24
+            y: 0.0
+            z: 0.0
+          normal:
+            x: 1.0
+            y: 0.0
+            z: 0.0
+    pl_base:
+      f1:
         type: "vector_magnitude"
-        params: 
+        params:
           field: "velocity"
           output_name: "velocity_mag"
-      f2: 
+      f2:
         type: "recenter"
-        params: 
-          field: "velocity_mag"
-          association: "element"
-      f3: 
-        type: "contour"
         params:
           field: "velocity_mag"
-          levels: 3
-    pl3:
-      f1: 
-        type: "vorticity"
-        params: 
-          field: "velocity"
-          output_name: "vel_vorticity"
-          use_cell_gradient: "false"
-      f2: 
-        type: "recenter"
-        params: 
-          field: "vel_vorticity"
           association: "element"
-      f3: 
-        type: "vector_magnitude"
-        params: 
-          field: "vel_vorticity"
-          output_name: "vorticity_mag"
-      f4: 
-        type: "3slice"
-        params: 
-          x_offset: -0.24
-          y_offset: -0.42
-          z_offset: -0.7
-    pl4: 
-      f1: 
-        type: "vorticity"
-        params: 
-          field: "velocity"
-          output_name: "vel_vorticity"
-          use_cell_gradient: "false"
-      f2: 
-        type: "recenter"
-        params: 
-          field: "vel_vorticity"
-          association: "element"
-      f3: 
-        type: "vector_magnitude"
-        params: 
-          field: "vel_vorticity"
-          output_name: "vorticity_mag"
-      f4: 
-        type: "contour"
+      f3:
+        type: "slice"
         params:
-          field: "vorticity_mag"
-          levels: 3
-
+          point:
+            x: 0.0
+            y: 0.0
+            z: 0.0
+          normal:
+            x: 0.0
+            y: 0.0
+            z: 1.0
 - 
-  action: add_scenes
+  action: "add_scenes"
   scenes:
-    s1: 
-      plots: 
-        p1: 
+    s1:
+      plots:
+        p1:
           type: "pseudocolor"
           field: "velocity_mag"
-          pipeline: "pl2"
+          pipeline: "pl_main"
+        p2:
+          type: "pseudocolor"
+          field: "velocity_mag"
+          pipeline: "pl_base"
+          color_table: 
+            annotation: "false"
       renders:
         r1:
           image_width: 1280
           image_height: 720
-          annotations: 'true'
+          annotations: true
           camera:
             up: [1.0, 0.0, 1.0]
             zoom: 2.0
           db_name: ascent-trame
-          dphi: 45.0
+          dphi: 5.0
           dtheta: 90.0
-          phi_range:
-          - -180.0
-          - 180.0
-          theta_range:
-          - 0.0
-          - 180.0
+          phi_range: [0.0, 360.0]
+          theta_range: [90.0, 90.01]
           type: cinema
