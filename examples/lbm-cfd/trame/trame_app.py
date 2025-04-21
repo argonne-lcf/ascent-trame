@@ -7,40 +7,16 @@ from multiprocessing.managers import BaseManager
 from trame.app import get_server, asynchronous
 from trame.widgets import vuetify, rca, client
 from trame.ui.vuetify import SinglePageLayout
+from ascenttrame.consumer import AscentConsumer
 
 class QueueManager(BaseManager):
     pass
     
 def main():
-    # create queues for Trame state and updates
-    state_queue = Queue()
-    update_queue = Queue()
-    
-    # start Trame app in new thread
-    trame_thread = Process(target=runTrameServer, args=(state_queue, update_queue))
-    trame_thread.daemon = True
-    trame_thread.start()
+    bridge = AscentConsumer(8000)
 
-    # create queues from Ascent data
-    queue_data = Queue()
-    queue_signal = Queue()
+    runTrameServer(bridge.getStateQueue(), bridge.getUpdateQueue())
 
-    # start Queue Manager in new thread
-    queue_mgr_thread = Process(target=runQueueManager, args=(queue_data, queue_signal))
-    queue_mgr_thread.daemon = True
-    queue_mgr_thread.start()
-   
-    # wait for data coming from Ascent 
-    data = None
-    while data != '':
-        print('waiting on data... ', end='')
-        sim_data = queue_data.get()
-        print(f'received!')
-        
-        state_queue.put(sim_data)
-        updates = update_queue.get()
-
-        queue_signal.put(updates)
 
 def runTrameServer(state_queue, update_queue):
     # create Ascent View
@@ -173,17 +149,6 @@ async def checkForStateUpdates(state, state_queue, update_queue, view, view_hand
             pass
         await asyncio.sleep(0)
 
-def runQueueManager(queue_data, queue_signal):
-    # register queues with Queue Manager
-    QueueManager.register('get_data_queue', callable=lambda:queue_data)
-    QueueManager.register('get_signal_queue', callable=lambda:queue_signal)
-    
-    # create Queue Manager
-    mgr = QueueManager(address=('127.0.0.1', 8000), authkey=b'ascent-trame')
-    
-    # start Queue Manager server
-    server = mgr.get_server()
-    server.serve_forever()
 
 # Trame RCA View Adapter
 class RcaViewAdapter:
@@ -250,9 +215,9 @@ class AscentView:
         self._jpeg_quality = 94
         self._frame_time = round(time.time_ns() / 1000000)
         self._colormaps = {
-            'divergent': self._loadColorMap('resrc/colormap_divergent.png'),
-            'turbo': self._loadColorMap('resrc/colormap_turbo.png'),
-            'inferno': self._loadColorMap('resrc/colormap_inferno.png')
+            'divergent': self._loadColorMap('../resrc/colormap_divergent.png'),
+            'turbo': self._loadColorMap('../resrc/colormap_turbo.png'),
+            'inferno': self._loadColorMap('../resrc/colormap_inferno.png')
         }
         self._cmap = 'divergent'
         self._new_barrier = {'display': False, 'p0': None, 'p1': None}
@@ -404,3 +369,4 @@ class AscentView:
 
 if __name__ == '__main__':
     main()
+
