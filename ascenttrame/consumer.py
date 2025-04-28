@@ -24,11 +24,16 @@ class AscentConsumer:
         ascent_bridge_thread.daemon = True
         ascent_bridge_thread.start()
 
-    def getStateQueue(self):
-        return self._state_queue
+    def sendUpdate(self, update_data):
+        self._update_queue.put(update_data)
 
-    def getUpdateQueue(self):
-        return self._update_queue
+    def pollForStateUpdate(self):
+        state_data = None
+        try:
+            state_data = self._state_queue.get(block=False)
+        except:
+            pass
+        return state_data
 
     @staticmethod
     def _runQueueManager(port, queue_data, queue_signal):

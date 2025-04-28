@@ -8,20 +8,36 @@ from trame.app import get_server, asynchronous
 from trame.widgets import vuetify, rca, client
 from trame.ui.vuetify import SinglePageLayout
 from ascenttrame.consumer import AscentConsumer
+from ascenttrame.tramestreamer import TrameImageStreamer
 
 class QueueManager(BaseManager):
     pass
     
 def main():
+    # create bridge to consume simulation data from Ascent
     bridge = AscentConsumer(8000)
-
-    runTrameServer(bridge.getStateQueue(), bridge.getUpdateQueue())
-
-
-def runTrameServer(state_queue, update_queue):
-    # create Ascent View
+    
+    # create Ascent View for TrameImageStreamer
     view = AscentView()
 
+    # set up Trame application
+    trame_app = TrameImageStreamer(view)
+    trame_app.setInitCallback(lambda: trame_app.createAsyncTask(checkForStateUpdates(trame_app, bridge, view)))
+    trame_app.setFixedImageWidth(1000, border=2)
+
+    
+    # TODO: start replace
+    with SinglePageLayout(trame_app._server) as layout:
+        client.Style('#rca-view div div img { width: 100%; height: auto; }')
+        layout.title.set_text('Ascent-Trame')
+        with layout.content:
+            with vuetify.VContainer(fluid=True, classes='pa-0 fill-height', style='justify-content: center; align-items: start;'):
+                v = rca.RemoteControlledArea(name='view', display='image', id='rca-view', style=('vis_style',))
+    # TODO: end replace
+
+    trame_app.start()
+
+    """
     # set up Trame application
     server = get_server(client_type="vue2")
     state = server.state
@@ -35,14 +51,14 @@ def runTrameServer(state_queue, update_queue):
         view_handler = RcaViewAdapter(view, 'view')
         ctrl.rc_area_register(view_handler)
     
-        asynchronous.create_task(checkForStateUpdates(state, state_queue, update_queue, view, view_handler))
+        asynchronous.create_task(checkForStateUpdates(state, bridge, view, view_handler))
 
     # callback for steering enabled change
     def uiStateEnableSteeringUpdate(enable_steering, **kwargs):
         if state.connected:
             state.allow_submit = enable_steering
         if not enable_steering:
-            update_queue.put({})
+            bridge.sendUpdate({})
 
     # callback for color map change
     def uiStateColorMapUpdate(color_map, **kwargs):
@@ -62,7 +78,7 @@ def runTrameServer(state_queue, update_queue):
             'flow_speed': state.flow_speed,
             'barriers': view.getBarriers()
         }
-        update_queue.put(steering_data)
+        bridge.sendUpdate(steering_data)
 
     # register callbacks
     state.change('enable_steering')(uiStateEnableSteeringUpdate)    
@@ -122,12 +138,31 @@ def runTrameServer(state_queue, update_queue):
 
     # start Trame server
     server.start()
+    """
 
-async def checkForStateUpdates(state, state_queue, update_queue, view, view_handler):
+async def checkForStateUpdates(trame_app, bridge, view):
     while True:
-        try:
-            state_data = state_queue.get(block=False)
-           
+        state_data = bridge.pollForStateUpdate()
+        if state_data != None:
+            trame_app.setStateValue('connected', True)
+
+            if trame_app.getStateValue('enable_steering') is True:
+                trame_app.setStateValue('allow_submit', True)
+
+            view.updateData(state_data)
+            trame_app.pushFrame()
+            view.updateScale(trame_app.getImageScale())
+
+            if trame_app.getStateValue('enable_steering') is False:
+               bridge.sendUpdate({}) 
+
+        await asyncio.sleep(0)
+"""
+async def checkForStateUpdates(state, bridge, view, view_handler):
+    while True:
+        state_data = bridge.pollForStateUpdate()
+        if state_data != None:           
+
             state.connected = True
             if state.enable_steering:
                 state.allow_submit = True
@@ -144,11 +179,9 @@ async def checkForStateUpdates(state, state_queue, update_queue, view, view_hand
             state.flush()
 
             if not state.enable_steering:
-                update_queue.put({})
-        except:
-            pass
+                bridge.sendUpdate({})
         await asyncio.sleep(0)
-
+"""
 
 # Trame RCA View Adapter
 class RcaViewAdapter:
