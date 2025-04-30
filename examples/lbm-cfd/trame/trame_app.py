@@ -21,19 +21,50 @@ def main():
     view = AscentView()
 
     # set up Trame application
-    trame_app = TrameImageStreamer(view)
+    trame_app = TrameImageStreamer(view, fixed_width=1000, border=2)
     trame_app.setInitCallback(lambda: trame_app.createAsyncTask(checkForStateUpdates(trame_app, bridge, view)))
-    trame_app.setFixedImageWidth(1000, border=2)
 
-    
-    # TODO: start replace
-    with SinglePageLayout(trame_app._server) as layout:
-        client.Style('#rca-view div div img { width: 100%; height: auto; }')
-        layout.title.set_text('Ascent-Trame')
-        with layout.content:
-            with vuetify.VContainer(fluid=True, classes='pa-0 fill-height', style='justify-content: center; align-items: start;'):
-                v = rca.RemoteControlledArea(name='view', display='image', id='rca-view', style=('vis_style',))
-    # TODO: end replace
+    trame_app.setStateValue('allow_submit', False)    
+
+     # callback for steering enabled change
+    def uiStateEnableSteeringUpdate(enable_steering, **kwargs):
+        if trame_app.getStateValue('connected') is True:
+            trame_app.setStateValue('allow_submit', enable_steering)
+        if not enable_steering:
+            bridge.sendUpdate({})
+
+    # callback for color map change
+    def uiStateColorMapUpdate(color_map, **kwargs):
+        view.setColormap(color_map.lower())
+        trame_app.pushFrame()
+
+    # callback to clear barriers
+    def uiClearBarriers():
+        view.clearBarriers()
+        trame_app.pushFrame()
+
+    # callback for clicking submit button
+    def uiSubmitSteeringOptions():
+        steering_data = {
+            'flow_speed': float(trame_app.getStateValue('flow_speed')),
+            'barriers': view.getBarriers()
+        }
+        bridge.sendUpdate(steering_data)
+
+    # set up custom widgets
+    widgets = [
+        {'type': 'divider'},
+        {'type': 'switch', 'label': 'Enable Steering', 'state_var': 'enable_steering', 'on_change': uiStateEnableSteeringUpdate, 'value': True},
+        {'type': 'spacer'},
+        {'type': 'slider', 'label': 'Flow Speed', 'state_var': 'flow_speed', 'min': 0.25, 'max': 1.5, 'step': 0.05, 'value': 0.75},
+        {'type': 'text', 'is_state_var': True, 'float_digits': 2, 'value': 'flow_speed'},
+        {'type': 'dropdown', 'label': 'Color Map', 'state_var': 'color_map', 'options': ['Divergent', 'Turbo', 'Inferno'], 'on_change': uiStateColorMapUpdate, 'value': 'Divergent'},
+        {'type': 'spacer'},
+        {'type': 'button', 'style': 'secondary', 'on_click': uiClearBarriers, 'value': 'Clear Barriers'},
+        {'type': 'spacer'},
+        {'type': 'button', 'style': 'primary', 'disable': '!allow_submit', 'on_click': uiSubmitSteeringOptions, 'value': 'Submit'}
+    ]
+    trame_app.setPageLayout('Ascent-Trame', widgets)
 
     trame_app.start()
 
@@ -143,7 +174,7 @@ def main():
 async def checkForStateUpdates(trame_app, bridge, view):
     while True:
         state_data = bridge.pollForStateUpdate()
-        if state_data != None:
+        if state_data is not None:
             trame_app.setStateValue('connected', True)
 
             if trame_app.getStateValue('enable_steering') is True:
@@ -183,6 +214,7 @@ async def checkForStateUpdates(state, bridge, view, view_handler):
         await asyncio.sleep(0)
 """
 
+"""
 # Trame RCA View Adapter
 class RcaViewAdapter:
     def __init__(self, view, name):
@@ -236,7 +268,7 @@ class RcaViewAdapter:
         if rerender:
             frame_data = self._view.getFrame()
             self._streamer.push_content(self.area_name, self._getMetadata(), frame_data.data)
-
+"""
 
 # Trame Custom View
 class AscentView:
