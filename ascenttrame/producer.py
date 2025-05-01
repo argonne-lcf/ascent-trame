@@ -62,6 +62,7 @@ class AscentProducer:
         update_data = {}
         if self._queue_signal is not None:
             update_data = self._queue_signal.get()
+        update_data = self._comm.bcast(update_data, root=0)
         return update_data
 
     def triggerSteeringCallback(self, callback_name, in_node, out_node):

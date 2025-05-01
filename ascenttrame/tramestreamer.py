@@ -2,6 +2,125 @@ from trame.app import get_server, asynchronous
 from trame.widgets import vuetify, rca, client
 from trame.ui.vuetify import SinglePageLayout
 
+# Trame widgets
+class TDivider:
+    def __init__(self):
+        self.type = 'divider'
+
+    def generateWidget(self):
+        vuetify.VDivider(vertical=True, classes="mx-2")
+
+class TSpacer:
+    def __init__(self):
+        self.type = 'spacer'
+
+    def generateWidget(self):
+        vuetify.VSpacer()
+
+class TText:
+    def __init__(self, value, is_state_var=False, float_digits=-1):
+        self.type = 'text'
+        self.value = value
+        self.is_state_var = is_state_var
+        self.float_digits = float_digits
+
+    def generateWidget(self):
+        text = self.value
+        if is_state_var:
+            if isinstance(self.float_digits, int) and self.float_digits >= 0:
+                text = f'{{{{{self.value}.toFixed({self.float_digits})}}}}'
+            else:
+                text = f'{{{{{self.value}}}}}'
+        vuetify.VCol(text)
+
+class TSwitch:
+    def __init__(self, label, state_var, value, on_change=None):
+        self.type = 'switch'
+        self.label = label
+        self.state_var = state_var
+        self.value = value
+        self.on_change = on_change
+
+    def generateWidget(self):
+        vuetify.VSwitch(
+            label=self.label,
+            v_model=(self.state_var, self.value),
+            hide_details=True,
+            dense=True
+        )
+
+class TButton:
+    def __init__(self, value, style='secondary', disable='', on_click=lambda: None):
+        self.type = 'button'
+        self.value = value
+        self.disable = disable
+        self.style = style
+        self.on_click = on_click
+
+    def generateWidget(self):
+        if isinstance(self.disable, str) and len(self.disable) > 0:
+            vuetify.VBtn(
+                self.value,
+                color=self.style,
+                disabled=(self.disable,),
+                click=self.on_click
+            )
+        else:
+            vuetify.VBtn(
+                self.value,
+                color=self.style,
+                click=self.on_click
+            )
+        
+class TSlider:
+    def __init__(self, label, state_var, vmin, vmax, step, value, on_change=None):
+        self.type = 'slider'
+        self.label = label
+        self.state_var = state_var
+        self.min = vmin
+        self.max = vmax
+        self.step = step
+        self.value = value
+        self.on_change = on_change
+
+    def generateWidget(self):
+        vuetify.VSlider(
+            label=self.label,
+            v_model=(self.state_var, self.value),
+            min=self.min,
+            max=self.max,
+            step=self.step,
+            hide_details=True,
+            dense=True
+        )
+
+        text = f'{{{{{self.state_var}}}}}'
+        if isinstance(self.step, float):
+            step_str = str(self.step)
+            integer, decimals = step_str.split('.')
+            num_dec = len(decimals)
+            text = f'{{{{{self.state_var}.toFixed({num_dec})}}}}'
+        vuetify.VCol(text)
+
+class TDropDownMenu:
+    def __init__(self, label, state_var, options, value, on_change=None):
+        self.type = 'dropdown'
+        self.label = label
+        self.state_var = state_var
+        self.options = options
+        self.value = value
+        self.on_change = on_change
+
+    def generateWidget(self):
+        vuetify.VSelect(
+            label=self.label,
+            v_model=(self.state_var, self.value),
+            items=(str(self.options),),
+            hide_details=True,
+            dense=True
+        )
+
+
 # Trame Image Streamer
 class TrameImageStreamer:
     def __init__(self, view, fixed_width=0, border=0):
@@ -47,8 +166,8 @@ class TrameImageStreamer:
 
     def setPageLayout(self, title, widgets):
         for w in widgets:
-            if (w['type'] == 'switch' or w['type'] == 'slider' or w['type'] == 'dropdown') and 'on_change' in w:
-                self._state.change(w['state_var'])(w['on_change'])
+            if getattr(w, 'on_change', None) is not None:
+                self._state.change(w.state_var)(w.on_change)
 
         with SinglePageLayout(self._server) as layout:
             if self._fixed_width > 0:
@@ -56,57 +175,7 @@ class TrameImageStreamer:
             layout.title.set_text(title)
             with layout.toolbar:
                 for w in widgets:
-                    if w['type'] == 'divider':
-                        vuetify.VDivider(vertical=True, classes="mx-2")
-                    elif w['type'] == 'spacer':
-                        vuetify.VSpacer()
-                    elif w['type'] == 'switch':
-                        vuetify.VSwitch(
-                            label=w['label'],
-                            v_model=(w['state_var'], w['value']),
-                            hide_details=True,
-                            dense=True
-                        )
-                    elif w['type'] == 'text':
-                        text = w['value']
-                        if 'is_state_var' in w and w['is_state_var'] is True:
-                            if 'float_digits' in w and isinstance(w['float_digits'], int):
-                                text = f'{{{{{w["value"]}.toFixed({w["float_digits"]})}}}}'
-                            else:
-                                text = f'{{{{{w["value"]}}}}}'
-                        vuetify.VCol(text)
-                    elif w['type'] == 'button':
-                        if 'disable' in w:
-                            vuetify.VBtn(
-                                w['value'],
-                                color=w['style'],
-                                disabled=(w['disable'],),
-                                click=w['on_click']
-                            )
-                        else:
-                            vuetify.VBtn(
-                                w['value'],
-                                color=w['style'],
-                                click=w['on_click']
-                            )
-                    elif w['type'] == 'slider':
-                        vuetify.VSlider(
-                            label=w['label'],
-                            v_model=(w['state_var'], w['value']),
-                            min=w['min'],
-                            max=w['max'],
-                            step=w['step'],
-                            hide_details=True,
-                            dense=True
-                        )
-                    elif w['type'] == 'dropdown':
-                        vuetify.VSelect(
-                            label=w['label'],
-                            v_model=(w['state_var'], w['value']),
-                            items=(str(w['options']),),
-                            hide_details=True,
-                            dense=True
-                        )
+                    w.generateWidget()
             with layout.content:
                 with vuetify.VContainer(fluid=True, classes='pa-0 fill-height', style='justify-content: center; align-items: start;'):
                     v = rca.RemoteControlledArea(name='view', display='image', id='rca-view', style=('vis_style',))

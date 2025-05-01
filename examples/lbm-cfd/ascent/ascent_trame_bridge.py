@@ -33,9 +33,6 @@ def main():
         # get steering updates from Trame application
         update_data = bridge.getSteeringDataFromTrame()
                 
-        # broadcast updates to all ranks
-        update_data = comm.bcast(update_data, root=0)
-
         # trigger callback in simulation with steering updates
         update_node = conduit.Node()
         update_node['task_id'] = bridge.getTaskId()
