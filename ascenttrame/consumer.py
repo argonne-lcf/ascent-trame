@@ -27,13 +27,13 @@ class AscentConsumer:
     def sendUpdate(self, update_data):
         self._update_queue.put(update_data)
 
-    def pollForStateUpdate(self):
-        state_data = None
+    def pollForPublishedData(self):
+        ascent_data = None
         try:
-            state_data = self._state_queue.get(block=False)
+            ascent_data = self._state_queue.get(block=False)
         except:
             pass
-        return state_data
+        return ascent_data
 
     @staticmethod
     def _runQueueManager(port, queue_data, queue_signal):

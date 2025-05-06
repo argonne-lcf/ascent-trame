@@ -65,14 +65,14 @@ def main():
 # Asynchronously check for state updates from Ascent
 async def checkForStateUpdates(trame_app, bridge, view):
     while True:
-        state_data = bridge.pollForStateUpdate()
-        if state_data is not None:
+        ascent_data = bridge.pollForPublishedData()
+        if ascent_data is not None:
             trame_app.setStateValue('connected', True)
 
             if trame_app.getStateValue('enable_steering') is True:
                 trame_app.setStateValue('allow_submit', True)
 
-            view.updateData(state_data)
+            view.updateData(ascent_data)
             trame_app.pushFrame()
             view.updateScale(trame_app.getImageScale())
 
