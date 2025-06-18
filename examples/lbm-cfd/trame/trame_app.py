@@ -88,7 +88,7 @@ class AscentView:
         self._data = None
         self._scale = 1.0
         self._base_image = None
-        self._image = np.zeros((2,1), dtype=np.uint8)
+        self._image = np.zeros((1, 2, 3), dtype=np.uint8)
         self._jpeg_quality = 94
         self._frame_time = round(time.time_ns() / 1000000)
         self._colormaps = {
@@ -117,13 +117,14 @@ class AscentView:
 
     def _renderBarriers(self):
         # draw lines for barriers
-        self._image = self._base_image.copy()
-        for barrier in self._data['barriers']:
-            self._image = cv2.line(self._image, (barrier[0], barrier[1]), (barrier[2], barrier[3]), (0, 0, 0), 1)
-        if self._new_barrier['display']:
-            pt0 = (self._new_barrier['p0']['x'], self._new_barrier['p0']['y'])
-            pt1 = (self._new_barrier['p1']['x'], self._new_barrier['p1']['y'])
-            self._image = cv2.line(self._image, pt0, pt1, (0, 0, 0), 1)
+        if self._data is not None:
+            self._image = self._base_image.copy()
+            for barrier in self._data['barriers']:
+                self._image = cv2.line(self._image, (barrier[0], barrier[1]), (barrier[2], barrier[3]), (0, 0, 0), 1)
+            if self._new_barrier['display']:
+                pt0 = (self._new_barrier['p0']['x'], self._new_barrier['p0']['y'])
+                pt1 = (self._new_barrier['p1']['x'], self._new_barrier['p1']['y'])
+                self._image = cv2.line(self._image, pt0, pt1, (0, 0, 0), 1)
 
     """
     return: size of view (width, height)

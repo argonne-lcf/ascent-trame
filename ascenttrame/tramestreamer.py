@@ -239,7 +239,7 @@ class RcaViewAdapter:
     def on_interaction(self, origin, event):
         event_type = event['type']
         rerender = False
-
+        
         if event_type == 'LeftButtonPress':
             rerender = self._view.onLeftMouseButton(event['x'], event['y'], True)
         elif event_type == 'LeftButtonRelease':
