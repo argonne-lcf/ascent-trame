@@ -3,7 +3,7 @@ import time
 import numpy as np
 import cv2
 from ascenttrame.consumer import AscentConsumer
-from ascenttrame.tramestreamer import TDivider, TSpacer, TText, TSwitch, TButton, TSlider, TDropDownMenu, TrameImageStreamer
+from ascenttrame.tramestreamer import TDivider, TSpacer, TText, TSwitch, TButton, TSlider, TDropDownMenu, TFileInput, TrameImageStreamer
 
 
 def main():
@@ -31,6 +31,12 @@ def main():
     def uiStateColorMapUpdate(color_map, **kwargs):
         view.setColormap(color_map.lower())
         trame_app.pushFrame()
+        
+    # callback for barrier file upload
+    def uiStateBarrierFromImage(barrier_file, **kwargs):
+        if isinstance(barrier_file, dict):
+            print(barrier_file['name'])
+            file_content = barrier_file['content']
 
     # callback to clear barriers
     def uiClearBarriers():
@@ -52,6 +58,8 @@ def main():
         TSpacer(),
         TSlider('Flow Speed', 'flow_speed', 0.25, 1.5, 0.05, 0.75),
         TDropDownMenu('Color Map', 'color_map', ['Divergent', 'Turbo', 'Inferno'], 'Divergent', on_change=uiStateColorMapUpdate),
+        TSpacer(),
+        TFileInput('Barrier Image', 'barrier_file', False, on_change=uiStateBarrierFromImage),
         TSpacer(),
         TButton('Clear Barriers', style='secondary', on_click=uiClearBarriers),
         TSpacer(),
