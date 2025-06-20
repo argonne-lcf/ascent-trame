@@ -1,5 +1,6 @@
 import asyncio
 import time
+import os
 import numpy as np
 import cv2
 from ascenttrame.consumer import AscentConsumer
@@ -35,8 +36,23 @@ def main():
     # callback for barrier file upload
     def uiStateBarrierFromImage(barrier_file, **kwargs):
         if isinstance(barrier_file, dict):
-            print(barrier_file['name'])
-            file_content = barrier_file['content']
+            root, ext = os.path.splitext(barrier_file['name'])
+            if ext.lower() in ['.png', '.jpeg', '.jpg', '.bmp']:
+                file_content = np.frombuffer(barrier_file['content'], np.uint8)
+                barrier_img = cv2.imdecode(file_content, cv2.IMREAD_UNCHANGED)
+                barrier_new = None
+                if len(barrier_img.shape) == 2: # grayscale
+                    barrier_new = barrier_img.astype(bool)
+                elif len(barrier_img.shape) == 3: # color
+                    barrier_new = np.any(barrier_img != 0, axis=2)
+                else:
+                    print('Warning: barrier file not recognized as grayscale or color image')
+                height, width = barrier_new.shape
+                print(barrier_new)
+                print(width, height)
+                # TODO: insert as sequence of horizontal barriers (runs per row of pixels)
+            else:
+                print('Warning: barrier file must be JPEG, PNG, or BMP')
 
     # callback to clear barriers
     def uiClearBarriers():
