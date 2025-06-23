@@ -1,3 +1,4 @@
+import time
 from trame.app import get_server, asynchronous
 from trame.widgets import vuetify, rca, client
 from trame.ui.vuetify import SinglePageLayout
@@ -132,7 +133,6 @@ class TrameImageStreamer:
 
         self._fixed_width = fixed_width
         self._border_size = border
-        self._image_scale = 1.0
 
         if self._fixed_width > 0:
             self._state.vis_style = f'width: {self._fixed_width}px; height: {self._fixed_width // 2}px; border: solid {self._border_size}px #000000; box-sizing: content-box;'
@@ -143,7 +143,6 @@ class TrameImageStreamer:
         self._view_handler = None
         @self._ctrl.add("on_server_ready")
         def initRca(**kwargs):
-            #nonlocal view_handler
             self._view_handler = RcaViewAdapter(view, 'view')
             self._ctrl.rc_area_register(self._view_handler)
             if self._init_callback is not None:
@@ -160,9 +159,6 @@ class TrameImageStreamer:
 
     def createAsyncTask(self, async_func):
         asynchronous.create_task(async_func)
-
-    def getImageScale(self):
-        return self._image_scale
 
     def setPageLayout(self, title, widgets):
         for w in widgets:
@@ -185,13 +181,42 @@ class TrameImageStreamer:
             if self._fixed_width > 0:
                 w, h = self._view_handler.getImageSize()
                 img_h = self._fixed_width * h // w
-                self._image_scale = self._fixed_width / w
+                self._view_handler.setImageScale(self._fixed_width / w)
                 self._state.update({'vis_style': f'width: {self._fixed_width}px; height: {img_h}px; border: solid {self._border_size}px #000000; box-sizing: content-box;'})
                 self._state.flush()
             self._view_handler.pushFrame()
 
     def start(self):
         self._server.start()
+
+
+# Trame RCA View (Base Class)
+class TrameImageView:
+    def __init__(self):
+        self._frame_time = round(time.time_ns() / 1000000)
+
+    def getSize(self):
+        return (0, 0)
+
+    def getFrame(self):
+        return None
+
+    def setFrameTime(self):
+        self._frame_time = round(time.time_ns() / 1000000)
+
+    def getFrameTime(self):
+        return self._frame_time
+
+    def onLeftMouseButton(self, mouse_x, mouse_y, pressed):
+        print('TrameImageView: Left mouse')
+        return False
+
+    def onRightMouseButton(self, mouse_x, mouse_y, pressed):
+        print('TrameImageView: Right mouse')
+        return False
+
+    def onMouseMove(self, mouse_x, mouse_y):
+        return False
 
 
 # Trame RCA View Adapter
@@ -207,6 +232,7 @@ class RcaViewAdapter:
             'st': 0,
             'key': 'key'
         }
+        self._image_scale = 1.0
 
         self.area_name = name
 
@@ -228,6 +254,9 @@ class RcaViewAdapter:
     def getImageSize(self):
         return self._view.getSize()
 
+    def setImageScale(self, scale):
+        self._image_scale = scale
+
     def set_streamer(self, stream_manager):
         self._streamer = stream_manager
 
@@ -241,11 +270,15 @@ class RcaViewAdapter:
         rerender = False
 
         if event_type == 'LeftButtonPress':
-            rerender = self._view.onLeftMouseButton(event['x'], event['y'], True)
+            rerender = self._view.onLeftMouseButton(int(event['x'] / self._image_scale), int(event['y'] / self._image_scale), True)
         elif event_type == 'LeftButtonRelease':
-            rerender = self._view.onLeftMouseButton(event['x'], event['y'], False)
+            rerender = self._view.onLeftMouseButton(int(event['x'] / self._image_scale), int(event['y'] / self._image_scale), False)
+        if event_type == 'RightButtonPress':
+            rerender = self._view.onRightMouseButton(int(event['x'] / self._image_scale), int(event['y'] / self._image_scale), True)
+        elif event_type == 'RightButtonRelease':
+            rerender = self._view.onRightMouseButton(int(event['x'] / self._image_scale), int(event['y'] / self._image_scale), False)
         elif event_type == 'MouseMove':
-            rerender = self._view.onMouseMove(event['x'], event['y'])
+            rerender = self._view.onMouseMove(int(event['x'] / self._image_scale), int(event['y'] / self._image_scale))
 
         if rerender:
             frame_data = self._view.getFrame()

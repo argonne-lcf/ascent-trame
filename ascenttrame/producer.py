@@ -27,7 +27,7 @@ class AscentProducer:
     def getNumberOfTasks(self):
         return self._num_tasks
 
-    def connectToTrameQueues(self, port_number):
+    def connectToConsumerQueues(self, port_number):
         interactive = np.array([1], np.uint8)
 
         if port_number >= 0:
@@ -54,11 +54,11 @@ class AscentProducer:
 
         return bool(global_interactive[0])
 
-    def sendDataToTrame(self, data):
+    def sendSimulationDataToConsumer(self, data):
         if self._queue_data is not None:
             self._queue_data.put(data)
 
-    def getSteeringDataFromTrame(self):
+    def getSteeringDataFromConsumer(self):
         update_data = {}
         if self._queue_signal is not None:
             update_data = self._queue_signal.get()

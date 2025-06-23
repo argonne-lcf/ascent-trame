@@ -3,15 +3,15 @@ import time
 import numpy as np
 import cv2
 from ascenttrame.consumer import AscentConsumer
-from ascenttrame.tramestreamer import TDivider, TSpacer, TText, TSwitch, TButton, TSlider, TDropDownMenu, TrameImageStreamer
+from ascenttrame.tramestreamer import TDivider, TSpacer, TText, TSwitch, TButton, TSlider, TDropDownMenu, TrameImageStreamer, TrameImageView
 
 
 def main():
     # create bridge to consume simulation data from Ascent
     bridge = AscentConsumer(8000)
     
-    # create Ascent View for TrameImageStreamer
-    view = AscentView()
+    # create custom View for TrameImageStreamer
+    view = LbmCfdView()
 
     # set up Trame application
     trame_app = TrameImageStreamer(view, fixed_width=1000, border=2)
@@ -74,7 +74,7 @@ async def checkForStateUpdates(trame_app, bridge, view):
 
             view.updateData(ascent_data)
             trame_app.pushFrame()
-            view.updateScale(trame_app.getImageScale())
+            #view.updateScale(trame_app.getImageScale())
 
             if trame_app.getStateValue('enable_steering') is False:
                bridge.sendUpdate({}) 
@@ -83,14 +83,15 @@ async def checkForStateUpdates(trame_app, bridge, view):
 
 
 # Trame Custom View
-class AscentView:
+class LbmCfdView(TrameImageView):
     def __init__(self):
+        super().__init__()
+
         self._data = None
         self._scale = 1.0
         self._base_image = None
         self._image = np.zeros((2,1), dtype=np.uint8)
         self._jpeg_quality = 94
-        self._frame_time = round(time.time_ns() / 1000000)
         self._colormaps = {
             'divergent': self._loadColorMap('../resrc/colormap_divergent.png'),
             'turbo': self._loadColorMap('../resrc/colormap_turbo.png'),
@@ -138,14 +139,9 @@ class AscentView:
     def getFrame(self):
         result, encoded_img = cv2.imencode('.jpg', self._image, (cv2.IMWRITE_JPEG_QUALITY, self._jpeg_quality))
         if result:
+            self.setFrameTime()
             return encoded_img
         return None
-
-    """
-    return: time frame was created
-    """
-    def getFrameTime(self):
-        return self._frame_time
 
     """
     return list of barriers
@@ -157,12 +153,6 @@ class AscentView:
         else:
             barriers = np.empty(shape=(0,0), dtype=np.int32)
         return barriers
-
-    """
-    Update scale for size image is displayed vs. actual size of image
-    """
-    def updateScale(self, scale):
-        self._scale = scale
 
     """
     Update data and create new visualization
@@ -204,8 +194,8 @@ class AscentView:
     """
     def onLeftMouseButton(self, mouse_x, mouse_y, pressed):
         height = self._image.shape[0]
-        mx = int(mouse_x / self._scale)
-        my = height - int(mouse_y / self._scale)
+        mx = mouse_x #int(mouse_x / self._scale)
+        my = height - mouse_y #height - int(mouse_y / self._scale)
         rerender = False
         if pressed:
             self._mouse_start['x'] = mx

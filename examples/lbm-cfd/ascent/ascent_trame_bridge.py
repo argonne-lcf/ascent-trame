@@ -1,6 +1,7 @@
 import numpy as np
 from mpi4py import MPI
 import conduit
+import ascent.mpi
 from ascenttrame.producer import AscentProducer
 
 def main():
@@ -10,7 +11,7 @@ def main():
 
     # only need rank 0 to connect and pass data to/from Trame application
     port = 8000 if bridge.getTaskId() == 0 else -1
-    if bridge.connectToTrameQueues(port):
+    if bridge.connectToConsumerQueues(port):
         # get simulation data published to Ascent
         mesh_data = ascent_data().child(0)
         
@@ -28,10 +29,10 @@ def main():
             vorticity = output['fields/vorticity/values'].reshape((dim_y, dim_x))
 
             # pass simulation data to Trame application
-            bridge.sendDataToTrame({'barriers': barriers, 'vorticity': vorticity})
+            bridge.sendSimulationDataToConsumer({'barriers': barriers, 'vorticity': vorticity})
 
         # get steering updates from Trame application
-        update_data = bridge.getSteeringDataFromTrame()
+        update_data = bridge.getSteeringDataFromConsumer()
                 
         # trigger callback in simulation with steering updates
         update_node = conduit.Node()
@@ -43,8 +44,8 @@ def main():
             update_node['num_barriers'] = num_barriers
             update_node['barriers'].set_external(update_data['barriers'].ravel())
         output = conduit.Node()
-        bridge.triggerSteeringCallback('steeringCallback', update_node, output)
-            
+        ascent.mpi.execute_callback('steeringCallback', update_node, output)
+
 
 main()
 
