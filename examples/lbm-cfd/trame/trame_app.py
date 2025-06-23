@@ -1,9 +1,10 @@
 import asyncio
 import time
+import os
 import numpy as np
 import cv2
 from ascenttrame.consumer import AscentConsumer
-from ascenttrame.tramestreamer import TDivider, TSpacer, TText, TSwitch, TButton, TSlider, TDropDownMenu, TrameImageStreamer, TrameImageView
+from ascenttrame.tramestreamer import TDivider, TSpacer, TText, TSwitch, TButton, TSlider, TDropDownMenu, TFileInput, TrameImageStreamer, TrameImageView
 
 
 def main():
@@ -16,6 +17,10 @@ def main():
     # set up Trame application
     trame_app = TrameImageStreamer(view, fixed_width=1000, border=2)
     trame_app.setInitCallback(lambda: trame_app.createAsyncTask(checkForStateUpdates(trame_app, bridge, view)))
+
+    #
+    view.updateScale(trame_app.getImageScale())
+    #
 
     trame_app.setStateValue('connected', False)
     trame_app.setStateValue('allow_submit', False)    
@@ -31,6 +36,34 @@ def main():
     def uiStateColorMapUpdate(color_map, **kwargs):
         view.setColormap(color_map.lower())
         trame_app.pushFrame()
+        
+    # callback for barrier file upload
+    """
+    MonaLisa_Barrier.png 602x924
+    TODO: make LBM-CFD simulation at that resolution (with flow from top to bottom)
+    """
+    def uiStateBarrierFromImage(barrier_file, **kwargs):
+        if isinstance(barrier_file, dict):
+            root, ext = os.path.splitext(barrier_file['name'])
+            if ext.lower() in ['.png', '.jpeg', '.jpg', '.bmp']:
+                file_content = np.frombuffer(barrier_file['content'], np.uint8)
+                barrier_img = cv2.imdecode(file_content, cv2.IMREAD_UNCHANGED)
+                barrier_new = None
+                if len(barrier_img.shape) == 2: # grayscale
+                    barrier_new = barrier_img.astype(bool)
+                elif len(barrier_img.shape) == 3: # color
+                    barrier_new = np.any(barrier_img != 0, axis=2)
+                else:
+                    print('Warning: barrier file not recognized as grayscale or color image')
+                height, width = barrier_new.shape
+                img_w, img_h = view.getSize()
+                if width == img_w and height == img_h:
+                    horizontal_barriers = findTrueRuns(barrier_new)
+                    view.setBarriers(horizontal_barriers)
+                else:
+                    print(f'Warning: barrier image size {width}x{height} does not match simulation dimensions {img_w}x{img_h}')
+            else:
+                print('Warning: barrier file must be JPEG, PNG, or BMP')
 
     # callback to clear barriers
     def uiClearBarriers():
@@ -52,6 +85,8 @@ def main():
         TSpacer(),
         TSlider('Flow Speed', 'flow_speed', 0.25, 1.5, 0.05, 0.75),
         TDropDownMenu('Color Map', 'color_map', ['Divergent', 'Turbo', 'Inferno'], 'Divergent', on_change=uiStateColorMapUpdate),
+        TSpacer(),
+        TFileInput('Barrier Image', 'barrier_file', False, on_change=uiStateBarrierFromImage),
         TSpacer(),
         TButton('Clear Barriers', style='secondary', on_click=uiClearBarriers),
         TSpacer(),
@@ -82,15 +117,38 @@ async def checkForStateUpdates(trame_app, bridge, view):
         await asyncio.sleep(0)
 
 
+# Find runs of True values in an array
+def findTrueRuns(arr):
+    # Step 1: Pad with False on both sides of each row
+    padded = np.pad(arr, ((0, 0), (1, 1)), mode='constant', constant_values=False)
+    
+    # Step 2: Compute difference to find rising/falling edges
+    diff = np.diff(padded.astype(np.int8), axis=1)
+    
+    # Step 3: Where diff == 1 -> start of True run, diff == -1 -> end of True run
+    run_starts = np.argwhere(diff == 1)
+    run_ends = np.argwhere(diff == -1)
+    
+    # Step 4: Combine into structured output: (row, start, row, end)
+    # Assumes starts and ends match in order for each row
+    assert np.array_equal(run_starts[:, 0], run_ends[:, 0]), "Mismatch in start/end rows"
+    
+    row_indices = run_starts[:, 0]
+    run_data = np.column_stack((run_starts[:, 1], row_indices, run_ends[:, 1] - 1, row_indices))
+    
+    return run_data.astype(np.int32)
+
 # Trame Custom View
 class LbmCfdView(TrameImageView):
     def __init__(self):
         super().__init__()
 
         self._data = None
+        #self._data = {'vorticity': np.zeros((924, 602), dtype=np.float32), 'barriers': np.empty(shape=(0,0), dtype=np.int32)}
         self._scale = 1.0
         self._base_image = None
-        self._image = np.zeros((2,1), dtype=np.uint8)
+        self._image = np.zeros((1, 2, 3), dtype=np.uint8)
+        #self._image = np.zeros((924, 602, 3), dtype=np.uint8)
         self._jpeg_quality = 94
         self._colormaps = {
             'divergent': self._loadColorMap('../resrc/colormap_divergent.png'),
@@ -118,13 +176,14 @@ class LbmCfdView(TrameImageView):
 
     def _renderBarriers(self):
         # draw lines for barriers
-        self._image = self._base_image.copy()
-        for barrier in self._data['barriers']:
-            self._image = cv2.line(self._image, (barrier[0], barrier[1]), (barrier[2], barrier[3]), (0, 0, 0), 1)
-        if self._new_barrier['display']:
-            pt0 = (self._new_barrier['p0']['x'], self._new_barrier['p0']['y'])
-            pt1 = (self._new_barrier['p1']['x'], self._new_barrier['p1']['y'])
-            self._image = cv2.line(self._image, pt0, pt1, (0, 0, 0), 1)
+        if self._data is not None:
+            self._image = self._base_image.copy()
+            for barrier in self._data['barriers']:
+                self._image = cv2.line(self._image, (barrier[0], barrier[1]), (barrier[2], barrier[3]), (0, 0, 0), 1)
+            if self._new_barrier['display']:
+                pt0 = (self._new_barrier['p0']['x'], self._new_barrier['p0']['y'])
+                pt1 = (self._new_barrier['p1']['x'], self._new_barrier['p1']['y'])
+                self._image = cv2.line(self._image, pt0, pt1, (0, 0, 0), 1)
 
     """
     return: size of view (width, height)
@@ -180,8 +239,17 @@ class LbmCfdView(TrameImageView):
         if self._data is not None:
             self.updateData(self._data)
 
-    """
 
+    """
+    Set barriers to new configuration
+    """
+    def setBarriers(self, barriers):
+        if self._data is not None:
+            self._data['barriers'] = barriers
+            self._renderBarriers()
+    
+    """
+    Clear all barriers
     """
     def clearBarriers(self):
         if self._data is not None:

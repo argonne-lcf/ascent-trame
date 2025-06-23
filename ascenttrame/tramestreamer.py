@@ -121,6 +121,22 @@ class TDropDownMenu:
             dense=True
         )
 
+class TFileInput:
+    def __init__(self, label, state_var, allow_multiple, on_change=None):
+        self.type = 'fileinput'
+        self.label = label
+        self.state_var = state_var
+        self.multiple = allow_multiple
+        self.on_change = on_change
+        
+    def generateWidget(self):
+        vuetify.VFileInput(
+            label=self.label,
+            v_model=(self.state_var, ''),
+            multiple=self.multiple,
+            hide_details=True,
+            dense=True
+        )
 
 # Trame Image Streamer
 class TrameImageStreamer:
@@ -268,7 +284,7 @@ class RcaViewAdapter:
     def on_interaction(self, origin, event):
         event_type = event['type']
         rerender = False
-
+        
         if event_type == 'LeftButtonPress':
             rerender = self._view.onLeftMouseButton(int(event['x'] / self._image_scale), int(event['y'] / self._image_scale), True)
         elif event_type == 'LeftButtonRelease':
