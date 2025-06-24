@@ -15,7 +15,7 @@ def main():
     view = LbmCfdView()
 
     # set up Trame application
-    trame_app = TrameImageStreamer(view, fixed_width=1000, border=2)
+    trame_app = TrameImageStreamer(view, fixed_width=720, border=2)
     trame_app.setInitCallback(lambda: trame_app.createAsyncTask(checkForStateUpdates(trame_app, bridge, view)))
 
     #

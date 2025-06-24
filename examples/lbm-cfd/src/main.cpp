@@ -1,4 +1,5 @@
 #include <iostream>
+#include <string>
 #include <iomanip>
 #include <vector>
 #include <cstdint>
@@ -38,6 +39,16 @@ int main(int argc, char **argv) {
     uint32_t dim_x = 600;
     uint32_t dim_y = 240;
     uint32_t time_steps = 20000;
+
+    if (argc >= 2) {
+        dim_x = std::stoi(argv[1]);
+    }
+    if (argc >= 3) {
+        dim_y = std::stoi(argv[2]);
+    }
+    if (argc >= 4) {
+        time_steps = std::stoi(argv[3]);
+    }
 
     if (rank == 0) std::cout << "LBM-CFD> running with " << num_ranks << " processes" << std::endl;
     if (rank == 0) std::cout << "LBM-CFD> resolution=" << dim_x << "x" << dim_y << ", time steps=" << time_steps << std::endl;
