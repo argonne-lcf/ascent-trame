@@ -15,7 +15,7 @@ def main():
     view = LbmCfdView()
 
     # set up Trame application
-    trame_app = TrameImageStreamer(view, fixed_width=1000, border=2)
+    trame_app = TrameImageStreamer(view, fixed_width=1200, border=2)
     trame_app.setInitCallback(lambda: trame_app.createAsyncTask(checkForStateUpdates(trame_app, bridge, view)))
 
     #
@@ -52,6 +52,8 @@ def main():
                 if len(barrier_img.shape) == 2: # grayscale
                     barrier_new = barrier_img.astype(bool)
                 elif len(barrier_img.shape) == 3: # color
+                    if barrier_img.shape[2] == 4:
+                        barrier_img = cv2.cvtColor(barrier_img, cv2.COLOR_BGRA2BGR)
                     barrier_new = np.any(barrier_img != 0, axis=2)
                 else:
                     print('Warning: barrier file not recognized as grayscale or color image')
@@ -60,6 +62,7 @@ def main():
                 if width == img_w and height == img_h:
                     horizontal_barriers = findTrueRuns(barrier_new)
                     view.setBarriers(horizontal_barriers)
+                    trame_app.pushFrame()
                 else:
                     print(f'Warning: barrier image size {width}x{height} does not match simulation dimensions {img_w}x{img_h}')
             else:
@@ -221,12 +224,12 @@ class LbmCfdView(TrameImageView):
     def updateData(self, data):
         self._data = data
         # apply colormap to data
-        val_min = -0.22
-        val_max = 0.22
+        val_min = -0.14 #-0.22
+        val_max = 0.14 #0.22
         vorticity = np.clip(data['vorticity'], val_min, val_max)
         colormap = self._colormaps[self._cmap]
         size = colormap.shape[0]
-        d_norm = ((size - 1) * ((vorticity - val_min) / (val_max - val_min))).astype(dtype=np.uint16)
+        d_norm = np.clip((size - 1) * ((vorticity - val_min) / (val_max - val_min)), 0, size - 1).astype(dtype=np.uint16)
         self._base_image = colormap[d_norm]
         # draw lines for barriers
         self._renderBarriers()
