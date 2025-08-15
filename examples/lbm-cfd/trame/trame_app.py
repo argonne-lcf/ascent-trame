@@ -84,7 +84,7 @@ def main():
         TSwitch('Enable Steering', 'enable_steering', True, on_change=uiStateEnableSteeringUpdate),
         TSpacer(),
         TSlider('Flow Speed', 'flow_speed', 0.25, 1.5, 0.05, 0.75),
-        TDropDownMenu('Color Map', 'color_map', ['Divergent', 'Turbo', 'Inferno'], 'Divergent', on_change=uiStateColorMapUpdate),
+        TDropDownMenu('Color Map', 'color_map', ['Divergent', 'Turbo', 'Inferno', 'StarryNight'], 'Divergent', on_change=uiStateColorMapUpdate),
         TSpacer(),
         TFileInput('Barrier Image', 'barrier_file', False, on_change=uiStateBarrierFromImage),
         TSpacer(),
@@ -153,7 +153,8 @@ class LbmCfdView(TrameImageView):
         self._colormaps = {
             'divergent': self._loadColorMap('../resrc/colormap_divergent.png'),
             'turbo': self._loadColorMap('../resrc/colormap_turbo.png'),
-            'inferno': self._loadColorMap('../resrc/colormap_inferno.png')
+            'inferno': self._loadColorMap('../resrc/colormap_inferno.png'),
+            'starrynight': self._loadColorMap('../resrc/colormap_starrynight.png')
         }
         self._cmap = 'divergent'
         self._new_barrier = {'display': False, 'p0': None, 'p1': None}

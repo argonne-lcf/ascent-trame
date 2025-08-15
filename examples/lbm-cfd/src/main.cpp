@@ -11,7 +11,8 @@
 
 #include "lbmd2q9_mpi.hpp"
 
-void runLbmCfdSimulation(int rank, int num_ranks, uint32_t dim_x, uint32_t dim_y, uint32_t time_steps, void *ptr);
+void runLbmCfdSimulation(int rank, int num_ranks, uint32_t dim_x, uint32_t dim_y, uint32_t time_steps,
+        double duration, double output_frequency, void *ptr);
 void createDivergingColorMap(uint8_t *cmap, uint32_t size);
 #ifdef ASCENT_ENABLED
 void updateAscentData(int rank, int num_ranks, int step, double time, conduit::Node &mesh);
@@ -39,19 +40,21 @@ int main(int argc, char **argv) {
     uint32_t dim_x = 600;
     uint32_t dim_y = 240;
     uint32_t time_steps = 20000;
+    double duration = 8.0;
+    double output_freq = 0.125;
 
-    if (argc >= 2) {
-        dim_x = std::stoi(argv[1]);
-    }
-    if (argc >= 3) {
-        dim_y = std::stoi(argv[2]);
-    }
-    if (argc >= 4) {
-        time_steps = std::stoi(argv[3]);
-    }
+    if (argc >= 2) dim_x = std::stoi(argv[1]);
+    if (argc >= 3) dim_y = std::stoi(argv[2]);
+    if (argc >= 4) time_steps = std::stoi(argv[3]);
+    if (argc >= 5) duration = std::stod(argv[4]);
+    if (argc >= 6) output_freq = std::stod(argv[5]);
 
-    if (rank == 0) std::cout << "LBM-CFD> running with " << num_ranks << " processes" << std::endl;
-    if (rank == 0) std::cout << "LBM-CFD> resolution=" << dim_x << "x" << dim_y << ", time steps=" << time_steps << std::endl;
+    if (rank == 0)
+    {
+        std::cout << "LBM-CFD> running with " << num_ranks << " processes" << std::endl;
+        std::cout << "LBM-CFD> resolution=" << dim_x << "x" << dim_y << ", time steps=" << time_steps << std::endl;
+        std::cout << "LBM-CFD> duration=" << duration << ", output frequency=" << output_freq << std::endl;
+    } 
 
     void *ascent_ptr = NULL;
 
@@ -77,7 +80,7 @@ int main(int argc, char **argv) {
 #endif
 
     // Run simulation
-    runLbmCfdSimulation(rank, num_ranks, dim_x, dim_y, time_steps, ascent_ptr);
+    runLbmCfdSimulation(rank, num_ranks, dim_x, dim_y, time_steps, duration, output_freq, ascent_ptr);
 
 #ifdef ASCENT_ENABLED
     ascent.close();
@@ -88,15 +91,16 @@ int main(int argc, char **argv) {
     return 0;
 }
 
-void runLbmCfdSimulation(int rank, int num_ranks, uint32_t dim_x, uint32_t dim_y, uint32_t time_steps, void *ptr)
+void runLbmCfdSimulation(int rank, int num_ranks, uint32_t dim_x, uint32_t dim_y, uint32_t time_steps,
+        double duration, double output_frequency, void *ptr)
 {
     // simulate corn syrup at 25 C in a 2 m pipe, moving 0.75 m/s for 8 sec
-    double physical_density = 1380.0;     // kg/m^3
-    double physical_speed = 0.75;         // m/s
-    double physical_length = 2.0;         // m
-    double physical_viscosity = 1.3806;   // Pa s
-    double physical_time = 8.0;           // s
-    double physical_freq = 0.25;//0.04;          // s
+    double physical_density = 1380.0;         // kg/m^3
+    double physical_speed = 0.75;             // m/s
+    double physical_length = 2.0;             // m
+    double physical_viscosity = 1.3806;       // Pa s
+    double physical_time = duration;          // s
+    double physical_freq = output_frequency;  // s
     double reynolds_number = (physical_density * physical_speed * physical_length) / physical_viscosity;
     
     // convert physical properties into simulation properties
